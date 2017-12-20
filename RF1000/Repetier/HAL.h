@@ -66,6 +66,13 @@ extern	unsigned char	g_bPingWatchdog;
 #define END_INTERRUPT_PROTECTED SREG=sreg;}
 #define ESCAPE_INTERRUPT_PROTECTED SREG=sreg;
 
+#ifndef cbi
+#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+#endif
+#ifndef sbi
+#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+#endif
+
 #define EEPROM_OFFSET               0
 #define SECONDS_TO_TICKS(s)			(unsigned long)(s*(float)F_CPU)
 #define ANALOG_REDUCE_BITS			0
@@ -756,6 +763,8 @@ public:
     // Watchdog support
     inline static void startWatchdog()
     {
+		g_bPingWatchdog = 1;
+
 #if FEATURE_WATCHDOG && WATCHDOG_PIN>-1
 		// external watchdog
 		SET_OUTPUT(WATCHDOG_PIN);
@@ -764,8 +773,6 @@ public:
 		// internal watchdog
         //wdt_enable(WDTO_1S);
 #endif // FEATURE_WATCHDOG && WATCHDOG_PIN>-1
-
-		g_bPingWatchdog = 1;
 
     } // startWatchdog
 

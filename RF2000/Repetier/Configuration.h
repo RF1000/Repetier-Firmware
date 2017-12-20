@@ -55,7 +55,7 @@ matches, the stored values are used to overwrite the settings.
 
 IMPORTANT: With mode <>0 some changes in Configuration.h are not set any more, as they are
            taken from the EEPROM. */
-#define EEPROM_MODE							121
+#define EEPROM_MODE							139
 
 
 // ##########################################################################################
@@ -363,12 +363,12 @@ usage or for seraching for memory induced errors. Switch it off for production, 
 
 
 // ##########################################################################################
-// ##	configuration of the emergency z stop functionality
+// ##	configuration of the emergency stop functionality
 // ##########################################################################################
 
 #if FEATURE_EMERGENCY_STOP_ALL
 
-/** \brief Specifies the pressure at which the emergency z-stop shall be performed, in [digits] */
+/** \brief Specifies the pressure at which the emergency stop shall be performed, in [digits] */
 #define EMERGENCY_STOP_DIGITS_MIN			-5000
 #define EMERGENCY_STOP_DIGITS_MAX			5000
 
@@ -677,6 +677,9 @@ Values must be in range 1..255 */
 #define BEEPER_START_WORK_PART_SCAN_SEQUENCE	100,2
 #define BEEPER_ABORT_WORK_PART_SCAN_SEQUENCE	250,5
 #define BEEPER_STOP_WORK_PART_SCAN_SEQUENCE		100,3
+#define BEEPER_START_ALIGN_EXTRUDERS_SEQUENCE	100,2
+#define BEEPER_ABORT_ALIGN_EXTRUDERS_SEQUENCE	250,5
+#define BEEPER_STOP_ALIGN_EXTRUDERS_SEQUENCE	100,3
 #define	BEEPER_ABORT_SET_POSITION_SEQUENCE		250,5
 #define	BEEPER_ACCEPT_SET_POSITION_SEQUENCE		100,2
 #define	BEEPER_SERVICE_INTERVALL_SEQUNCE		100,3
@@ -837,8 +840,8 @@ non-Repetier PC applications may fall over the debug outputs of the firmware. */
 #define	COMMAND_BLOCK_DELAY					1000												// [ms]
 
 /** \brief Configuration of the external watchdog
-The TPS3820 of the RF1000/RF2000 resets about 25 ms after the last time when it was triggered, the value of WATCHDOG_TIMEOUT should be less than half of this time. */
-#define WATCHDOG_TIMEOUT					10													// [ms]
+The TPS3820 of the RF1000/RF2000 resets about 112/200/310 (min/typical/max) ms after the last time when it was triggered, the value of WATCHDOG_TIMEOUT should be less than half of this (min) time. */
+#define WATCHDOG_TIMEOUT					50													// [ms]
 #define	WATCHDOG_MAIN_LOOP_TIMEOUT			10000												// [ms]
 
 /** \brief Longer-lasting operations shall call our periodical actions at least each defined time interval */

@@ -37,6 +37,7 @@
 #define PRINTER_FLAG1_UI_ERROR_MESSAGE			16
 #define PRINTER_FLAG1_NO_DESTINATION_CHECK		32
 #define PRINTER_FLAG1_Z_ORIGIN_SET				64
+#define PRINTER_FLAG2_RESET_FILAMENT_USAGE		4 
 
 
 class Printer
@@ -68,6 +69,7 @@ public:
     static uint8_t			debugLevel;
     static uint8_t			flag0;
 	static uint8_t			flag1;
+    static uint8_t			flag2;
     static uint8_t			stepsPerTimerCall;
     static unsigned long	interval;							// Last step duration in ticks.
     static unsigned long	timer;								// used for acceleration/deceleration timing
@@ -94,7 +96,6 @@ public:
     static unsigned long	msecondsPrinting;					// Milliseconds of printing time (means time with heated extruder)
 	static unsigned long	msecondsMilling;					// Milliseconds of milling time
     static float			filamentPrinted;					// mm of filament printed since counting started
-    static uint8_t			wasLastHalfstepping;				// Indicates if last move had halfstepping enabled
 	static long				ZOffset;							// Z Offset in um
 	static char				ZMode;								// Z Scale
 	static char				moveMode[3];						// move mode which is applied within the Position X/Y/Z menus
@@ -1089,12 +1090,11 @@ public:
 		// return all values in [mm]
 		float	fvalue = (float)currentZPositionSteps();
 
+
 		if (Printer::ZMode <= Z_VALUE_MODE_Z_MIN)
 		{
 			// show the z-distance to z-min (print) or to the z-origin (mill)
-			
 		}
-
 		else if (Printer::ZMode == Z_VALUE_MODE_SURFACE)
 		{
 			// show the z-distance to the surface of the heat bed (print) or work part (mill)
@@ -1132,7 +1132,12 @@ public:
     static void constrainQueueDestinationCoords();
     static void constrainDirectDestinationCoords();
     static void updateDerivedParameter();
-    static void updateCurrentPosition(bool copyLastCmd = false);
+
+#if FEATURE_CONFIGURABLE_HOTEND_TYPE
+	static void updateHotendType();
+#endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
+
+	static void updateCurrentPosition(bool copyLastCmd = false);
     static void kill(uint8_t only_steppers);
     static void updateAdvanceFlags();
     static void setup();

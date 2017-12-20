@@ -287,6 +287,8 @@
 #define UI_TEXT_RESET_ACK				"Restart now?","","%mYYes","%mNNo"
 #define UI_TEXT_HEAT_BED_SCAN_ABORTED	"Scan aborted"
 #define UI_TEXT_HEAT_BED_SCAN_DONE		"Scan completed"
+#define UI_TEXT_ALIGN_EXTRUDERS_ABORTED	"Align aborted"
+#define UI_TEXT_ALIGN_EXTRUDERS_DONE	"Align completed"
 #define UI_TEXT_ALIGN_EXTRUDERS			"Align Extruders"
 #define UI_TEXT_PRINT_MODE				"Printer"
 #define UI_TEXT_MILL_MODE				"Miller"
@@ -298,6 +300,7 @@
 #define UI_TEXT_Z_MODE_Z_ORIGIN			"Z Ori."
 #define UI_TEXT_HOTEND_V1				"V1"
 #define UI_TEXT_HOTEND_V2				"V2"
+#define UI_TEXT_HOTEND_V3				"V3"
 #define UI_TEXT_MILLER_ONE_TRACK		"one t."
 #define UI_TEXT_MILLER_TWO_TRACKS		"two t."
 #define UI_TEXT_Z_COMPENSATION_ACTIVE	"Cmp"
@@ -329,6 +332,8 @@
 #define UI_TEXT_MOVE_MODE_1_MM			"1 mm"
 #define UI_TEXT_MOVE_MODE_10_MM			"10 mm"
 #define UI_TEXT_MOVE_MODE_50_MM			"50 mm"
+#define	UI_TEXT_CURRENT_FILE			"Current File:"
+#define UI_TEXT_LAST_FILE				"Last File:"
 
 #define UI_TEXT_ERROR					"Error:"
 #define UI_TEXT_WARNING					"Warning:"
@@ -366,7 +371,7 @@
 #define UI_TEXT_STOP_MILL_ACK			"Stop Mill now?","","%mYYes","%mNNo"
 
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 #define	UI_TEXT_RGB_LIGHT_MODE			"RGB Light: %li"
 #define UI_TEXT_230V_OUTPUT				"230V Output: %ou"
 #define UI_TEXT_BAUDRATE				"Baudrate: %oc"
@@ -398,7 +403,7 @@
 #define UI_TEXT_TEMPERATURE_MANAGER		"Temperatur Manager"
 #define UI_TEXT_OPERATION_DENIED		"Operation denied"
 #define	UI_TEXT_TEMPERATURE_WRONG		"Temperature wrong"
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 
 // ##########################################################################################
 // ##    German
@@ -592,6 +597,8 @@
 #define UI_TEXT_RESET_ACK				"Neustart jetzt?","","%mYJa","%mNNein"
 #define UI_TEXT_HEAT_BED_SCAN_ABORTED	"Scan abgebrochen"
 #define UI_TEXT_HEAT_BED_SCAN_DONE		"Scan beendet"
+#define UI_TEXT_ALIGN_EXTRUDERS_ABORTED	"Ausr. abgebr."
+#define UI_TEXT_ALIGN_EXTRUDERS_DONE	"Ausr. beendet"
 #define UI_TEXT_ALIGN_EXTRUDERS			"Extruder ausr."
 #define UI_TEXT_PRINT_MODE				"Drucker"
 #define UI_TEXT_MILL_MODE				"Fr" STR_auml "ser"
@@ -603,6 +610,7 @@
 #define UI_TEXT_Z_MODE_Z_ORIGIN			"Z Urs."
 #define UI_TEXT_HOTEND_V1				"V1"
 #define UI_TEXT_HOTEND_V2				"V2"
+#define UI_TEXT_HOTEND_V3				"V3"
 #define UI_TEXT_MILLER_ONE_TRACK		"eine S."
 #define UI_TEXT_MILLER_TWO_TRACKS		"zwei S."
 #define UI_TEXT_Z_COMPENSATION_ACTIVE	"Kmp"
@@ -634,6 +642,8 @@
 #define UI_TEXT_MOVE_MODE_1_MM			"1 mm"
 #define UI_TEXT_MOVE_MODE_10_MM			"10 mm"
 #define UI_TEXT_MOVE_MODE_50_MM			"50 mm"
+#define	UI_TEXT_CURRENT_FILE			"Aktuelle Datei:"
+#define UI_TEXT_LAST_FILE				"Letzte Datei:"
 
 #define UI_TEXT_ERROR					"Fehler:"
 #define UI_TEXT_WARNING					"Warnung:"
@@ -670,7 +680,7 @@
 #define UI_TEXT_STOP_MILL				"Fr" STR_auml "sen abbr."
 #define UI_TEXT_STOP_MILL_ACK			"Fr" STR_auml "sen abbr.?","","%mYJa","%mNNein"
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 #define	UI_TEXT_EXTRUDER_OFFSET_X		"Extruder Abstand X"
 #define	UI_TEXT_EXTRUDER_OFFSET_Y		"Extruder Abstand Y"
 #define UI_TEXT_SET_Z_ORIGIN			"Setze Z Ursprung"
@@ -732,6 +742,6 @@
 #define UI_TEXT_INVALID_MATRIX			"Ung" STR_uuml" ltige Matrix"
 #define	UI_TEXT_TEMPERATURE_WRONG		"Temperatur falsch"
 
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 #endif // UI_LANGUAGE==1
 #endif // UI_LANG_H

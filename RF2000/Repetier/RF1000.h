@@ -207,6 +207,26 @@ Overridden if EEPROM activated.*/
 
 
 // ##########################################################################################
+// ##	Hotend V3
+// ##########################################################################################
+
+/** \brief The maximum value, I-gain can contribute to the output. */
+#define HT4_PID_INTEGRAL_DRIVE_MAX			180
+
+/** \brief lower value for integral part. */
+#define HT4_PID_INTEGRAL_DRIVE_MIN			40
+
+/** \brief P-gain. */
+#define HT4_PID_P							95
+
+/** \brief I-gain. */
+#define HT4_PID_I							120
+
+/** \brief Dgain. */
+#define HT4_PID_D							130
+
+
+// ##########################################################################################
 // ##	Miller type 1 (= one track)
 // ##########################################################################################
 
@@ -233,7 +253,8 @@ Overridden if EEPROM activated.*/
 #define EXT0_STEPS_PER_MM					(8.75 * RF_MICRO_STEPS)
 
 /** \brief What type of sensor is used?
-3 is mendel-parts thermistor (EPCOS G550) */
+3  is mendel-parts thermistor (EPCOS G550) ... to be used for hotend V1 and V2
+13 is NTC 3950 100k thermistor ... to be used for hotend V3 */
 #define EXT0_TEMPSENSOR_TYPE				3
 
 /** \brief Analog input pin for reading temperatures or pin enabling SS for MAX6675 */
@@ -299,7 +320,7 @@ Overridden if EEPROM activated. */
 #if EXT0_HOTEND_TYPE == HOTEND_TYPE_V2_SINGLE
 
 /** \brief The maximum value, I-gain can contribute to the output. Overridden if EEPROM activated. */
-#define EXT0_PID_INTEGRAL_DRIVE_MAX			HT3_PID_INTEGRAL_DRIVE_MIN
+#define EXT0_PID_INTEGRAL_DRIVE_MAX			HT3_PID_INTEGRAL_DRIVE_MAX
 
 /** \brief lower value for integral part. Overridden if EEPROM activated. */
 #define EXT0_PID_INTEGRAL_DRIVE_MIN			HT3_PID_INTEGRAL_DRIVE_MIN
@@ -379,7 +400,8 @@ The codes are only executed for multiple extruder when changing the extruder. */
 #define EXT1_STEPS_PER_MM					(8.75 * RF_MICRO_STEPS)
 
 /** \brief What type of sensor is used?
-3 is mendel-parts thermistor (EPCOS G550) */
+3  is mendel-parts thermistor (EPCOS G550) ... to be used for hotend V1 and V2
+13 is NTC 3950 100k thermistor ... to be used for hotend V3 */
 #define EXT1_TEMPSENSOR_TYPE				3
 
 /** \brief Analog input pin for reading temperatures or pin enabling SS for MAX6675 */
@@ -444,7 +466,7 @@ Overridden if EEPROM activated. */
 #if EXT1_HOTEND_TYPE == HOTEND_TYPE_V2_SINGLE
 
 /** \brief The maximum value, I-gain can contribute to the output. Overridden if EEPROM activated. */
-#define EXT1_PID_INTEGRAL_DRIVE_MAX			HT3_PID_INTEGRAL_DRIVE_MIN
+#define EXT1_PID_INTEGRAL_DRIVE_MAX			HT3_PID_INTEGRAL_DRIVE_MAX
 
 /** \brief lower value for integral part. Overridden if EEPROM activated. */
 #define EXT1_PID_INTEGRAL_DRIVE_MIN			HT3_PID_INTEGRAL_DRIVE_MIN
@@ -765,6 +787,16 @@ can set it on for safety. */
 #define HEATER_PWM_SPEED					1
 #define COOLER_PWM_SPEED					0
 
+/** \brief You can use either PWM (pulse width modulation) or PDM (pulse density modulation) for
+// coolers. PDM will give more signal changes per second, so on average it gives
+// the cleaner signal. The only advantage of PWM is giving signals at a fixed rate and never more
+// then PWM. */
+#define PDM_FOR_COOLER						1
+
+/** \brief Some fans won't start for low values, but would run if started with higher power at the beginning.
+This defines the full power duration before returning to set value. Time is in milliseconds */
+#define FAN_KICKSTART_TIME					200
+
 
 // ##########################################################################################
 // ##	Movement settings
@@ -791,8 +823,8 @@ can set it on for safety. */
 #define MAX_FEEDRATE_Z						50
 
 /** \brief Home position speed in mm/s. Overridden if EEPROM activated. */
-#define HOMING_FEEDRATE_X_PRINT				165
-#define HOMING_FEEDRATE_Y_PRINT				165
+#define HOMING_FEEDRATE_X_PRINT				80
+#define HOMING_FEEDRATE_Y_PRINT				80
 #define HOMING_FEEDRATE_Z_PRINT				10
 
 #define HOMING_FEEDRATE_X_MILL				70
@@ -834,7 +866,7 @@ This is like reducing your 1/16th microstepping to 1/8 or 1/4. It is much cheape
 additional stepper interrupts with all it's overhead. As a result you can go as high as
 40000Hz. */
 
-#define STEP_DOUBLER_FREQUENCY				12000
+#define STEP_DOUBLER_FREQUENCY				6500
 /** \brief If you need frequencies off more then 30000 you definitely need to enable this. If you have only 1/8 stepping
 enabling this may cause to stall your moves when 20000Hz is reached. */
 
@@ -842,13 +874,7 @@ enabling this may cause to stall your moves when 20000Hz is reached. */
 
 /** \brief If you reach STEP_DOUBLER_FREQUENCY the firmware will do 2 or 4 steps with nearly no delay. That can be too fast
 for some printers causing an early stall. */
-#define DOUBLE_STEP_DELAY					1													// [us]
-
-/** \brief The firmware supports trajectory smoothing. To achieve this, it divides the stepsize by 2, resulting in
-the double computation cost. For slow movements this is not an issue, but for really fast moves this is
-too much. The value specified here is the number of clock cycles between a step on the driving axis.
-If the interval at full speed is below this value, smoothing is disabled for that line.*/
-#define MAX_HALFSTEP_INTERVAL				1999
+#define DOUBLE_STEP_DELAY					0													// [us]
 
 
 // ##########################################################################################
@@ -903,7 +929,7 @@ don't care about empty buffers during print. */
 /** \brief Cycles per move, if move cache is low.
 This value must be high enough, that the buffer has time to fill up. The problem only occurs at the beginning of a print or
 if you are printing many very short segments at high speed. Higher delays here allow higher values in PATH_PLANNER_CHECK_SEGMENTS. */
-#define LOW_TICKS_PER_MOVE					400000
+#define LOW_TICKS_PER_MOVE					250000
 
 
 // ##########################################################################################

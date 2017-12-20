@@ -55,7 +55,6 @@ public:
 private:
     flag8_t				primaryAxis;
     int32_t				timeInTicks;
-    flag8_t				halfStep;					///< 4 = disabled, 1 = halfstep, 2 = fulstep
     flag8_t				dir;						///< Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
     int32_t				delta[4];					///< Steps we want to move.
     int32_t				error[4];					///< Error calculation for Bresenham algorithm
@@ -218,11 +217,14 @@ public:
 			if( Printer::isHomed() )
 			{
 				// the following checks shall not allow to continue the z-move in case the z home position is unknown
-				if( Printer::currentZSteps > -Z_OVERRIDE_MAX )
+				if( Printer::currentZSteps >= -Z_OVERRIDE_MAX )
 				{
 					// we allow to overdrive Z-min a little bit so that also G-Codes are able to move to a smaller z-position even when Z-min has fired already
 					return;
 				}
+
+				//Com::printF( PSTR( "ES: " ), Printer::currentZSteps );
+				//Com::printFLN( PSTR( ", " ), Printer::directPositionTargetSteps[Z_AXIS] );
 
 				// during normal operation, we never should end up here ... typically, the Z-min hardware switch must be reconfigured when you end up here
 				doEmergencyStop( STOP_BECAUSE_OF_Z_MIN );
@@ -257,6 +259,12 @@ public:
     {
         dir&=~48;
     } // setXYMoveFinished
+
+    inline void setEMoveFinished()
+    {
+        dir&=~128;
+        Extruder::current->stepperDirection = 0;
+    } // setEMoveFinished
 
     inline bool isXPositiveMove()
     {
@@ -432,11 +440,6 @@ public:
     {
         return Printer::stepNumber <= accelSteps;
     } // moveAccelerating
-
-    inline bool isFullstepping()
-    {
-        return halfStep == 4;
-    } // isFullstepping
 
     inline void startXStep()
     {
@@ -614,7 +617,11 @@ public:
 		if(isEMove())
 		{
 			Extruder::enable();
-			Extruder::setDirection(isEPositiveMove());
+
+#ifdef USE_ADVANCE
+            if(!Printer::isAdvanceActivated()) // Set direction if no advance/OPS enabled
+#endif // USE_ADVANCE
+				Extruder::setDirection(isEPositiveMove());
 		}
 		started = 1;
 

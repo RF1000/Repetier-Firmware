@@ -31,6 +31,10 @@
 #include "RF2000.h"
 #endif // MOTHERBOARD == DEVICE_TYPE_RF2000
 
+#if MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#include "RF2000V2.h"
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+
 
 #include "pins.h"
 #include "HAL.h"
@@ -168,6 +172,10 @@ extern uint8_t				counter250ms;
 
 
 extern void writeMonitor();
+
+#if FEATURE_FAN_CONTROL
+extern uint8_t				fanKickstart;
+#endif // FEATURE_FAN_CONTROL
 
 #if SDSUPPORT
 extern char					tempLongFilename[LONG_FILENAME_LENGTH+1];

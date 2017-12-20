@@ -282,7 +282,7 @@ void HAL::setupTimer()
 	OCR4C = 0;										// default B = 0 at startup
 #endif // FEATURE_RGB_LIGHT_EFFECTS
 
-#if FEATURE_SERVO && MOTHERBOARD == DEVICE_TYPE_RF2000
+#if FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2)
 	//Configure Timer 5
 	TCCR5A	= 0;									// clear Register
 	TCCR5B  = 0;
@@ -301,7 +301,7 @@ void HAL::setupTimer()
 	OCR5A = 1600;									// default ( 800 [uS] )
 	OCR5B = 1600;									// default ( 800 [uS] )
 	OCR5C = 1600;									// default ( 800 [uS] )
-#endif // FEATURE_SERVO && MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2)
 
 #if FEATURE_SERVO && MOTHERBOARD == DEVICE_TYPE_RF1000
 #if SERVO0_PIN>-1
@@ -758,7 +758,6 @@ inline void setTimer(uint32_t delay)
 } // setTimer
 
 
-volatile uint8_t	insideTimer1 = 0;
 long				stepperWait  = 0;
 
 /** \brief Timer interrupt routine to drive the stepper motors.
@@ -773,7 +772,6 @@ ISR(TIMER1_COMPA_vect)
 	}
 #endif // FEATURE_WATCHDOG
 
-    if(insideTimer1) return;
     uint8_t doExit;
     __asm__ __volatile__ (
         "ldi %[ex],0 \n\t"
@@ -801,7 +799,7 @@ ISR(TIMER1_COMPA_vect)
         :[ex]"=&d"(doExit):[ocr]"i" (_SFR_MEM_ADDR(OCR1A)):"r22","r23" );
     if(doExit) return;
 
-    insideTimer1 = 1;
+    cbi(TIMSK1, OCIE1A); // prevent retrigger timer by disabling timer interrupt. Should be faster than guarding with insideTimer1.
 	OCR1A		 = 61000;
 
 
@@ -821,7 +819,7 @@ ISR(TIMER1_COMPA_vect)
         setTimer(PrintLine::performQueueMove());
 
 		DEBUG_MEMORY;
-	    insideTimer1 = 0;
+	    sbi(TIMSK1, OCIE1A);
 		return;
     }
 
@@ -831,7 +829,7 @@ ISR(TIMER1_COMPA_vect)
         setTimer(PrintLine::performDirectMove());
 		
 		DEBUG_MEMORY;
-	    insideTimer1 = 0;
+	    sbi(TIMSK1, OCIE1A);
 		return;
 	}
 #endif // FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
@@ -862,7 +860,7 @@ ISR(TIMER1_COMPA_vect)
     OCR1A = 1000;			// Wait for next move
 
 	DEBUG_MEMORY;
-    insideTimer1 = 0;
+    sbi(TIMSK1, OCIE1A);
 
 } // ISR(TIMER1_COMPA_vect)
 
@@ -895,6 +893,8 @@ ISR(TIMER1_COMPA_vect)
 #define COOLER_PWM_STEP 4
 #define COOLER_PWM_MASK 252
 #endif // COOLER_PWM_SPEED == 0
+
+#define pulseDensityModulate( pin, density,error,invert) {uint8_t carry;carry = error + (invert ? 255 - density : density); WRITE(pin, (carry < error)); error = carry;}
 
 /**
 This timer is called 3906 times per second. It is used to update pwm values for heater and some other frequent jobs.
@@ -939,7 +939,7 @@ ISR(PWM_TIMER_VECTOR)
 #endif // HEATED_BED_HEATER_PIN>-1 && HAVE_HEATED_BED
     }
 
-	if(pwm_count_cooler == 0)
+	if(pwm_count_cooler == 0 && !PDM_FOR_COOLER)
     {
 #if EXT0_HEATER_PIN>-1 && EXT0_EXTRUDER_COOLER_PIN>-1
         if((pwm_cooler_pos_set[0] = extruder[0].coolerPWM)>0) WRITE(EXT0_EXTRUDER_COOLER_PIN,1);
@@ -980,12 +980,7 @@ ISR(PWM_TIMER_VECTOR)
 #endif // FAN_BOARD_PIN>-1
 
 #if FAN_PIN>-1 && FEATURE_FAN_CONTROL
-        if((pwm_heater_pos_set[NUM_EXTRUDER+2] = pwm_pos[NUM_EXTRUDER+2])>0)
-		{
-			WRITE(FAN_PIN,1);
-			//g_debugLog = 4;
-			//g_debugUInt16 ++;
-		}
+        if((pwm_heater_pos_set[NUM_EXTRUDER+2] = (pwm_pos[NUM_EXTRUDER+2] & COOLER_PWM_MASK)) > 0) WRITE(FAN_PIN,1);
 #endif // FAN_PIN>-1 && FEATURE_FAN_CONTROL
     }
 
@@ -1036,21 +1031,30 @@ ISR(PWM_TIMER_VECTOR)
 #endif // #if FAN_BOARD_PIN>-1
 
 #if FAN_PIN>-1 && FEATURE_FAN_CONTROL
-    if(pwm_heater_pos_set[NUM_EXTRUDER+2] == pwm_count_cooler && pwm_heater_pos_set[NUM_EXTRUDER+2]!=255) WRITE(FAN_PIN,0);
+    if(fanKickstart == 0)
+	{
+#if PDM_FOR_COOLER
+        pulseDensityModulate(FAN_PIN, pwm_pos[NUM_EXTRUDER+2], pwm_heater_pos_set[NUM_EXTRUDER+2], false);
+#else
+        if(pwm_pos_set[NUM_EXTRUDER+2] == pwm_count_cooler && pwm_heater_pos_set[NUM_EXTRUDER+2] != COOLER_PWM_MASK) WRITE(FAN_PIN,0);
+#endif // PDM_FOR_COOLER
+    }
 #endif // FAN_PIN>-1 && FEATURE_FAN_CONTROL
 
 #if HEATED_BED_HEATER_PIN>-1 && HAVE_HEATED_BED
     if(pwm_heater_pos_set[NUM_EXTRUDER] == pwm_count_heater && pwm_heater_pos_set[NUM_EXTRUDER]!=HEATER_PWM_MASK) WRITE(HEATED_BED_HEATER_PIN,HEATER_PINS_INVERTED);
 #endif // HEATED_BED_HEATER_PIN>-1 && HAVE_HEATED_BED
 
-    HAL::allowInterrupts();
-
 	counterPeriodical++; // Approximate a 100ms timer
     if(counterPeriodical>=(int)(F_CPU/40960))
     {
         counterPeriodical=0;
 		executePeriodical=1;
-    }
+
+#if FAN_PIN>-1 && FEATURE_FAN_CONTROL
+        if (fanKickstart) fanKickstart--;
+#endif // FAN_PIN>-1 && FEATURE_FAN_CONTROL
+	}
 
 #if FEATURE_RGB_LIGHT_EFFECTS
 	if( (HAL::timeInMilliseconds() - Printer::RGBLightLastChange) > RGB_LIGHT_COLOR_CHANGE_SPEED )

@@ -265,6 +265,14 @@ void Commands::printCurrentPosition()
 		Com::printF(Com::tSpaceYColon,y*(Printer::unitIsInches?0.03937:1),2);
 		Com::printF(Com::tSpaceZColon,z*(Printer::unitIsInches?0.03937:1),2);
 		Com::printFLN(Com::tSpaceEColon,Printer::queuePositionLastSteps[E_AXIS]*Printer::invAxisStepsPerMM[E_AXIS]*(Printer::unitIsInches?0.03937:1),2);
+
+/*		long	nTemp = Printer::directPositionCurrentSteps[Z_AXIS] - Printer::currentZSteps;
+		Com::printF( PSTR( "" ), Printer::currentZSteps );
+		Com::printF( PSTR( ", " ), Printer::directPositionCurrentSteps[Z_AXIS] );
+		Com::printF( PSTR( ", " ), Printer::directPositionTargetSteps[Z_AXIS] );
+		Com::printF( PSTR( " > " ), nTemp );
+		Com::printFLN( PSTR( ", " ), Printer::compensatedPositionCurrentStepsZ );
+*/		
 		//Com::printF(PSTR("OffX:"),Printer::extruderOffset[X_AXIS]); // to debug offset handling
 		//Com::printFLN(PSTR(" OffY:"),Printer::extruderOffset[Y_AXIS]);
 
@@ -378,23 +386,45 @@ void Commands::changeFlowateMultiply(int factor)
 } // changeFlowateMultiply
 
 
+#if FEATURE_FAN_CONTROL
+uint8_t fanKickstart;
+#endif
+
 void Commands::setFanSpeed(int speed,bool wait)
 {
-#if FAN_PIN>=0
-    speed = constrain(speed,0,255);
-    Printer::setMenuMode(MENU_MODE_FAN_RUNNING,speed!=0);
+#if FAN_PIN>=0 && FEATURE_FAN_CONTROL
+	speed = constrain(speed,0,255);
 
-    if(wait)
-        Commands::waitUntilEndOfAllMoves(); // use only if needed this to change the speed exactly at that point, but it may cause blobs if you do!
+	if( pwm_pos[NUM_EXTRUDER+2] == speed )
+	{
+		// there is nothing to do when the fan speed does not change
+		return;
+	}
 
 	if( Printer::debugInfo() )
 	{
-		if(speed!=pwm_pos[NUM_EXTRUDER+2])
-			Com::printFLN(Com::tFanspeed,speed);
+		Com::printFLN(Com::tFanspeed,speed);
 	}
 
+    Printer::setMenuMode(MENU_MODE_FAN_RUNNING,speed!=0);
+
+    if(wait)
+	{
+        Commands::waitUntilEndOfAllMoves(); // use only if needed this to change the speed exactly at that point, but it may cause blobs if you do!
+	}
+
+#if FAN_KICKSTART_TIME
+    if(fanKickstart == 0 && speed > pwm_pos[NUM_EXTRUDER+2] && speed < 85)
+    {
+         if(pwm_pos[NUM_EXTRUDER+2])	fanKickstart = FAN_KICKSTART_TIME / 100;
+         else							fanKickstart = FAN_KICKSTART_TIME / 25;
+    }
+#endif // FAN_KICKSTART_TIME
+
     pwm_pos[NUM_EXTRUDER+2] = speed;
-#endif
+
+	Com::printFLN(Com::tFanspeed,speed); // send only new values to break update loops!
+#endif // FAN_PIN>=0 && FEATURE_FAN_CONTROL
 
 } // setFanSpeed
 
@@ -956,11 +986,13 @@ void Commands::executeGCode(GCode *com)
 			}
 			case 24: // M24 - Start SD print
 			{
+#if FEATURE_PAUSE_PRINTING
 				if( g_pauseStatus == PAUSE_STATUS_PAUSED ) 
 				{
 					continuePrint();
 				}
 				else
+#endif // FEATURE_PAUSE_PRINTING
 				{
 					sd.startPrint();
 				}
@@ -968,7 +1000,9 @@ void Commands::executeGCode(GCode *com)
 			}
 			case 25: // M25 - Pause SD print
 			{
+#if FEATURE_PAUSE_PRINTING
 				pausePrint();
+#endif // FEATURE_PAUSE_PRINTING
 				break;
 			}
 			case 26: // M26 - Set SD index
@@ -1556,11 +1590,11 @@ void Commands::executeGCode(GCode *com)
 #endif // FEATURE_CONFIGURABLE_Z_ENDSTOPS
 #endif // MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 				// the RF2000 uses the max endstop in all operating modes
 				Com::printF(Com::tZMaxColon);
 				Com::printF(Printer::isZMaxEndstopHit()?Com::tHSpace:Com::tLSpace);
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 #endif // (Z_MAX_PIN > -1) && MAX_HARDWARE_ENDSTOP_Z
 
 				Com::println();
@@ -1823,7 +1857,7 @@ void Commands::executeGCode(GCode *com)
 			}
 #endif // FEATURE_SERVO && MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if FEATURE_SERVO && MOTHERBOARD == DEVICE_TYPE_RF2000
+#if FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2)
 			case 340:	// M340
 			{
 				if( com->hasP() )
@@ -1889,7 +1923,7 @@ void Commands::executeGCode(GCode *com)
 				}
 				break;
 			}
-#endif // FEATURE_SERVO && MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2)
 
 #if DEBUG_QUEUE_MOVE
 			case 533:	// M533 - Write move data

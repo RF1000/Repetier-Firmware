@@ -20,7 +20,7 @@
 #define EEPROM_H
 
 // Id to distinguish version changes
-#define EEPROM_PROTOCOL_VERSION			8
+#define EEPROM_PROTOCOL_VERSION			9
 
 /** Where to start with our datablock in memory. Can be moved if you
 have problems with other modules using the eeprom */
@@ -78,6 +78,30 @@ have problems with other modules using the eeprom */
 
 #define EPR_MILLING_TIME				181  // Time in seconds milling
 
+#define EPR_SDMODE						300
+#define EPR_SDPOS						301
+#define EPR_BED_TEMP					305
+#define EPR_EXTRUDER_1_TEMP				309
+#define EPR_EXTRUDER_2_TEMP				313
+#define EPR_FAN_SPEED					317
+#define EPR_RELATIVE_COORDINATE_MODE	318
+#define EPR_UNIT_IS_INCHES				319
+#define EPR_ORIGIN_OFFSET_X				320
+#define EPR_ORIGIN_OFFSET_Y				324
+#define EPR_ORIGIN_OFFSET_Z				328
+#define EPR_ORIGIN_OFFSET_E				332
+#define EPR_MAX_ACCELERATION_X			336
+#define EPR_MAX_ACCELERATION_Y			340
+#define EPR_MAX_ACCELERATION_Z			344
+#define EPR_MAX_ACCELERATION_E			348
+#define EPR_MAX_TRAVEL_ACCELERATION_X	352
+#define EPR_MAX_TRAVEL_ACCELERATION_Y	356
+#define EPR_MAX_TRAVEL_ACCELERATION_Z	360
+#define EPR_MAX_TRAVEL_ACCELERATION_E	364
+#define EPR_FEEDRATE					368
+#define EPR_FLOWRATE					372
+
+
 #define EPR_RF_BEEPER_MODE				1000
 #define	EPR_RF_CASE_LIGHT_MODE			1001
 #define	EPR_RF_230V_OUTPUT_MODE			1002
@@ -112,6 +136,7 @@ have problems with other modules using the eeprom */
 #define	EPR_RF_MOVE_MODE_Y				1043
 #define	EPR_RF_MOVE_MODE_Z				1044
 #define EPR_RF_Z_MODE					1045
+#define	EPR_RF_LAST_PRINTED_FILE		1100	// MAX_FILE_NAME_LENGTH bytes
 
 #define EEPROM_EXTRUDER_OFFSET			200
 
@@ -142,6 +167,7 @@ have problems with other modules using the eeprom */
 #define EPR_EXTRUDER_WAIT_RETRACT_TEMP	50
 #define EPR_EXTRUDER_WAIT_RETRACT_UNITS	52
 #define EPR_EXTRUDER_COOLER_SPEED		54
+#define EPR_EXTRUDER_SENSOR_TYPE		56
 
 
 class EEPROM
@@ -168,6 +194,9 @@ public:
     static void update(GCode *com);
     static void updatePrinterUsage();
 	static int getExtruderOffset(uint8_t extruder=0);
+
+	static void writeLastPrintedFile();
+	static void readLastPrintedFile();
 
 }; // EEPROM
 

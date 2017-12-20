@@ -236,12 +236,21 @@ for 2 row displays. You can add additional pages or change the default pages lik
 	#define UI_SERVICE_COUNT 0
 #endif // EEPROM_MODE && FEATURE_SERVICE_INTERVAL
 
+#if EEPROM_MODE!=0 && SDSUPPORT
+	UI_PAGE4(ui_page6,"%Y1","%Y2","%Y3","%Y4");
+	#define UI_PRINTED_FILE_PAGES ,&ui_page6
+	#define UI_PRINTED_FILE_COUNT 1
+#else
+	#define UI_PRINTED_FILE_PAGES
+	#define UI_PRINTED_FILE_COUNT 0
+#endif // EEPROM_MODE && SDSUPPORT
+
 	/* Merge pages together. Use the following pattern:
 	#define UI_PAGES {&name1,&name2,&name3} */
-	#define UI_PAGES {&ui_page1,&ui_page2,&ui_page3 UI_PRINTTIME_PAGES UI_SERVICE_PAGES}
+	#define UI_PAGES {&ui_page1,&ui_page2,&ui_page3 UI_PRINTTIME_PAGES UI_SERVICE_PAGES UI_PRINTED_FILE_PAGES}
 
 	// How many pages do you want to have. Minimum is 1.
-	#define UI_NUM_PAGES 3+UI_PRINTTIME_COUNT+UI_SERVICE_COUNT
+	#define UI_NUM_PAGES 3+UI_PRINTTIME_COUNT+UI_SERVICE_COUNT+UI_PRINTED_FILE_COUNT
 #else
 	UI_PAGE2(ui_page1,UI_TEXT_PAGE_EXTRUDER,UI_TEXT_PAGE_BED);
 	UI_PAGE2(ui_page2,"X:%x0 Y:%x1","%os");
@@ -344,6 +353,17 @@ UI_MENU_ACTIONCOMMAND_FILTER(ui_menu_heat_bed_scan_abs,UI_TEXT_HEAT_BED_SCAN_ABS
 
 #endif // FEATURE_PRECISE_HEAT_BED_SCAN
 
+#if NUM_EXTRUDER == 2
+
+UI_MENU_ACTIONCOMMAND_FILTER(ui_menu_align_extruders,UI_TEXT_ALIGN_EXTRUDERS,UI_ACTION_RF_ALIGN_EXTRUDERS,MENU_MODE_PRINTER,0);
+#define UI_MENU_ALIGN_EXTRUDERS_COND	,&ui_menu_align_extruders
+#define	UI_MENU_ALIGN_EXTRUDERS_COUNT	1
+#else
+#define UI_MENU_ALIGN_EXTRUDERS_COND	 
+#define	UI_MENU_ALIGN_EXTRUDERS_COUNT	0
+
+#endif // NUM_EXTRUDER == 2
+
 UI_MENU_ACTIONCOMMAND_FILTER(ui_menu_work_part_scan,UI_TEXT_DO_WORK_PART_SCAN,UI_ACTION_RF_SCAN_WORK_PART,0,MENU_MODE_PRINTER);
 
 UI_MENU_ACTION4C(ui_menu_zoffset,UI_ACTION_ZOFFSET,UI_TEXT_ACTION_ZOFFSET);
@@ -372,13 +392,13 @@ UI_MENU_ACTIONCOMMAND_FILTER(ui_menu_set_xy_end,UI_TEXT_SET_SCAN_XY_END,UI_ACTIO
 UI_MENU_CHANGEACTION_FILTER(ui_menu_set_delta_x,UI_TEXT_SET_SCAN_DELTA_X,UI_ACTION_RF_SET_SCAN_DELTA_X,0,MENU_MODE_PRINTER);
 UI_MENU_CHANGEACTION_FILTER(ui_menu_set_delta_y,UI_TEXT_SET_SCAN_DELTA_Y,UI_ACTION_RF_SET_SCAN_DELTA_Y,0,MENU_MODE_PRINTER);
 
-#define UI_MENU_Z {UI_MENU_ADDCONDBACK /*UI_MENU_ADJUST_HOTEND*/ &ui_menu_heat_bed_scan UI_MENU_HEAT_BED_MODE_COND, &ui_menu_zoffset_z, &ui_menu_work_part_scan UI_SPEED_Z /*UI_SPEED_Z_NOTEST*/,&ui_menu_set_z_origin UI_MENU_FIND_Z_COND, &ui_menu_set_z_matrix_heat_bed, &ui_menu_set_z_matrix_work_part, &ui_menu_set_xy_start, &ui_menu_set_xy_end, &ui_menu_set_delta_x, &ui_menu_set_delta_y}
-UI_MENU(ui_menu_z,UI_MENU_Z,11 + UI_MENU_BACKCNT + UI_MENU_HEAT_BED_MODE_COUNT + UI_MENU_FIND_Z_COUNT/*+UI_MENU_ADJUST_HOTEND_COUNT*/);
+#define UI_MENU_Z {UI_MENU_ADDCONDBACK /*UI_MENU_ADJUST_HOTEND*/ &ui_menu_heat_bed_scan UI_MENU_HEAT_BED_MODE_COND UI_MENU_ALIGN_EXTRUDERS_COND, &ui_menu_zoffset_z, &ui_menu_work_part_scan UI_SPEED_Z /*UI_SPEED_Z_NOTEST*/,&ui_menu_set_z_origin UI_MENU_FIND_Z_COND, &ui_menu_set_z_matrix_heat_bed, &ui_menu_set_z_matrix_work_part, &ui_menu_set_xy_start, &ui_menu_set_xy_end, &ui_menu_set_delta_x, &ui_menu_set_delta_y}
+UI_MENU(ui_menu_z,UI_MENU_Z,11 + UI_MENU_BACKCNT + UI_MENU_HEAT_BED_MODE_COUNT + UI_MENU_ALIGN_EXTRUDERS_COUNT + UI_MENU_FIND_Z_COUNT/*+UI_MENU_ADJUST_HOTEND_COUNT*/);
 
 #else
 
-#define UI_MENU_Z {UI_MENU_ADDCONDBACK &ui_menu_heat_bed_scan UI_MENU_HEAT_BED_MODE_COND, &ui_menu_zoffset_z UI_SPEED_Z /*UI_SPEED_Z_NOTEST*/, &ui_menu_set_z_matrix_heat_bed}
-UI_MENU(ui_menu_z,UI_MENU_Z,4 + UI_MENU_BACKCNT + UI_MENU_HEAT_BED_MODE_COUNT);
+#define UI_MENU_Z {UI_MENU_ADDCONDBACK &ui_menu_heat_bed_scan UI_MENU_HEAT_BED_MODE_COND UI_MENU_ALIGN_EXTRUDERS_COND, &ui_menu_zoffset_z UI_SPEED_Z /*UI_SPEED_Z_NOTEST*/, &ui_menu_set_z_matrix_heat_bed}
+UI_MENU(ui_menu_z,UI_MENU_Z,4 + UI_MENU_BACKCNT + UI_MENU_HEAT_BED_MODE_COUNT + UI_MENU_ALIGN_EXTRUDERS_COUNT);
 
 #endif // FEATURE_MILLING_MODE
 
@@ -667,14 +687,14 @@ UI_MENU_ACTIONCOMMAND_FILTER(ui_menu_miller_type,UI_TEXT_MILLER_TYPE,UI_ACTION_M
 #define	MILLER_TYPE_COUNT 0
 #endif // FEATURE_CONFIGURABLE_MILLER_TYPE
 
-#if FEATURE_CONFIGURABLE_HOTEND_TYPE && MOTHERBOARD == DEVICE_TYPE_RF1000
-UI_MENU_ACTIONCOMMAND_FILTER(ui_menu_hotend_type,UI_TEXT_HOTEND_TYPE,UI_ACTION_HOTEND_TYPE,MENU_MODE_PRINTER,0);
+#if FEATURE_CONFIGURABLE_HOTEND_TYPE
+UI_MENU_CHANGEACTION_FILTER(ui_menu_hotend_type,UI_TEXT_HOTEND_TYPE,UI_ACTION_HOTEND_TYPE,MENU_MODE_PRINTER,0);
 #define HOTEND_TYPE_ENTRY ,&ui_menu_hotend_type
 #define	HOTEND_TYPE_COUNT 1
 #else
 #define HOTEND_TYPE_ENTRY 
 #define	HOTEND_TYPE_COUNT 0
-#endif // FEATURE_CONFIGURABLE_HOTEND_TYPE && MOTHERBOARD == DEVICE_TYPE_RF1000
+#endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
 
 #else
 
@@ -742,13 +762,13 @@ UI_MENU_SUBMENU(ui_menu_main4, UI_TEXT_DEBUGGING,	   ui_menu_debugging);
 
 UI_MENU_SUBMENU(ui_menu_main5, UI_TEXT_CONFIGURATION,  ui_menu_configuration);
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 #define UI_MENU_MAIN {UI_MENU_ADDCONDBACK  &ui_menu_main1,&ui_menu_sd_print_file,&ui_menu_sd_mill_file,&ui_menu_main2,&ui_menu_main3,UI_MENU_FAN_COND UI_MENU_SD_COND DEBUGGING_MENU_ENTRY &ui_menu_main5}
 UI_MENU(ui_menu_main,UI_MENU_MAIN,6+UI_MENU_BACKCNT+UI_MENU_SD_CNT+UI_MENU_FAN_CNT+DEBUGGING_MENU_COUNT);
 #else
 #define UI_MENU_MAIN {UI_MENU_ADDCONDBACK  &ui_menu_main1,&ui_menu_main2,&ui_menu_main3,UI_MENU_FAN_COND UI_MENU_SD_COND DEBUGGING_MENU_ENTRY &ui_menu_main5}
 UI_MENU(ui_menu_main,UI_MENU_MAIN,5+UI_MENU_BACKCNT+UI_MENU_SD_CNT+UI_MENU_FAN_CNT+DEBUGGING_MENU_COUNT);
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 
 /* Define menus accessible by action commands
 

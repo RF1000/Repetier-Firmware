@@ -1,3 +1,34 @@
+V RF.01.39 (2017-12-20)
+- Adding of support for the hotend V3, which uses the NTC 3950 100k thermistor.
+- Adding of the "Align Extruders" entry to the "Configuration" -> "Z Calibration" menu.
+  - This entry can be used in order to start/stop the alignment of the extruders.
+  - The new command M3309 also can be used in order to start/abort the alignment of the extruders.
+- The names of the current and of the last printed files are displayed at the new, 6. status page.
+  - This status page can be reached via the up/down buttons when no menu is active.
+- During the precise heat bed scan, the status display displays the remaining time in [s] while it waits until all components are heated up.
+- M3076 can be used now in order to configure the minimal and maximal digits which are used for the checks around the emergency stop.
+  - M3076 S0 P0 can be used in order to disable the emergency stop.
+- Adding of the kickstart-functionality for the extruder fan.
+  - Adding of PDM_FOR_COOLER, which allows to switch the control of the extruder fan from PWM to PDM.
+- The homing feedrates in x and y direction have been reduced from 165 to 80.
+- In case only the hardware buttons were used for moving of the heating bed up and down, the z-steps could be counted wrongly and also the z-position could become wrong.
+- In case the second extruder had not been selected since the last startup of the firmware, setting of the temperatur could miss to calculate all parameters of the PID controller properly.
+- An error within the initial setup of the PID controller has been fixed. As a result it might make sense to update user-specific PID parameters.
+- During the pausing of the printing, the motor current was reduced only for the first (and not for an eventually present second) extruder.
+- The firmware ensures that a clean "start" command is sent to the USB host during its startup. Thus, the host can detect a restart of the firmware properly also when a print is going on at the moment and it can stop the print.
+- An internal overflow could cause sporadic, not reproducible errors.
+- Improved guarding of ISR(TIMER1_COMPA_vect) against being called multiple times.
+- In case the heat bed scan is aborted, the current heat bed matrix is loaded from now on. Previously, always the first heat bed matrix was loaded in this scenario.
+- In case the e-axis is moved while the printing is paused, the e-axis does not move anymore during the continue (because the user has to configure the continue position for the e-axis manually in this case).
+- In case x/y moves to the pause position reached the minimal/maximal x/y borders, the printing could have re-started at a wrong x/y position after the continue.
+- The half-stepping has been removed from the firmware because it is not necessary anymore.
+- The case fan is turned off only in case all extruders are turned off.
+  - Until now, the case fan could be turned off when any extruder was turned off (even in case there were other extruders still on).
+- Correction of the temperature table for the sensor type 8.
+- Minor clean-ups.
+- Special thanks apply to the following users from the forum at rf1000.de, because they have provided outstanding information and support for several changes from this version:
+  - Nibbels, PeterKA
+
 V RF.01.37 (2017-01-20)
 - On some boards the watchdog could fire during the startup of the firmware, in which case the firmware ended in an endless restart loop.
 - M116 uses TEMP_TOLERANCE instead of "1" in order to judge whether the target temperature has been reached.

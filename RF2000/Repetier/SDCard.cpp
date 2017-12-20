@@ -492,6 +492,16 @@ bool SDCard::selectFile(char *filename, bool silent)
 		else
 			oldP = filename;
 
+		// remember the last printed file and take over the currently printed file
+		strcpy( g_szLastPrintedFile, g_szCurrentlyPrintedFile );
+		strncpy( g_szCurrentlyPrintedFile, oldP, MAX_FILE_NAME_LENGTH );
+		g_szCurrentlyPrintedFile[MAX_FILE_NAME_LENGTH-1] = 0;
+
+#if EEPROM_MODE!=0
+		EEPROM::writeLastPrintedFile();
+		EEPROM::updateChecksum();
+#endif // EEPROM_MODE!=0
+
         if(!silent)
         {
 			if( Printer::debugInfo() )

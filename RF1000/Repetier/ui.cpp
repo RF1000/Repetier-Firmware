@@ -756,6 +756,21 @@ void UIDisplay::addStringP(FSTRINGPARAM(text))
 } // addStringP
 
 
+void UIDisplay::addString(char* text)
+{
+	char	i = 0;
+
+
+    while(col<MAX_COLS)
+    {
+        uint8_t c = text[i++];
+        if(c==0) return;
+        printCols[col++]=c;
+    }
+
+} // addString
+
+
 UI_STRING(ui_text_on,UI_TEXT_ON);
 UI_STRING(ui_text_off,UI_TEXT_OFF);
 UI_STRING(ui_text_0,UI_TEXT_0);
@@ -778,6 +793,7 @@ UI_STRING(ui_text_z_mode_surface,UI_TEXT_Z_MODE_SURFACE);
 UI_STRING(ui_text_z_mode_z_origin,UI_TEXT_Z_MODE_Z_ORIGIN);
 UI_STRING(ui_text_hotend_v1,UI_TEXT_HOTEND_V1);
 UI_STRING(ui_text_hotend_v2,UI_TEXT_HOTEND_V2);
+UI_STRING(ui_text_hotend_v3,UI_TEXT_HOTEND_V3);
 UI_STRING(ui_text_miller_one_track,UI_TEXT_MILLER_ONE_TRACK);
 UI_STRING(ui_text_miller_two_tracks,UI_TEXT_MILLER_TWO_TRACKS);
 UI_STRING(ui_text_z_compensation_active,UI_TEXT_Z_COMPENSATION_ACTIVE);
@@ -996,6 +1012,7 @@ void UIDisplay::parse(char *txt,bool ram)
 						case HOTEND_TYPE_V1:		addStringP(ui_text_hotend_v1);	break;
 						case HOTEND_TYPE_V2_SINGLE:	addStringP(ui_text_hotend_v2);	break;
 						case HOTEND_TYPE_V2_DUAL:	addStringP(ui_text_hotend_v2);	break;
+						case HOTEND_TYPE_V3:		addStringP(ui_text_hotend_v3);	break;
 					}				
 #endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
 				}
@@ -1087,12 +1104,14 @@ void UIDisplay::parse(char *txt,bool ram)
 #if SDSUPPORT
 						if(sd.sdactive && sd.sdmode)
 						{
+#if FEATURE_PAUSE_PRINTING
 							if( g_pauseMode >= PAUSE_MODE_PAUSED )
 							{
 								// do not show the printing/milling progress while we are paused
 								parse(statusMsg,true);
 							}
 							else
+#endif // FEATURE_PAUSE_PRINTING
 							{
 #if FEATURE_MILLING_MODE
 								if( Printer::operatingMode == OPERATING_MODE_PRINT )
@@ -1609,15 +1628,39 @@ void UIDisplay::parse(char *txt,bool ram)
 				}
 				break;
 			}
+
+#if SDSUPPORT
+			case 'Y':																					// %Y1-Y4: Page6 printed file
+			{
+				if(c2=='1')																				// %Y1: Shows text currently printed file
+				{
+					addStringP(PSTR(UI_TEXT_CURRENT_FILE));
+				}
+				else if(c2=='2')																		// %Y2: Shows currently printed file
+				{
+					addString(g_szCurrentlyPrintedFile);
+				}
+				else if(c2=='3')																		// %Y3: Shows text last printed file
+				{
+					addStringP(PSTR(UI_TEXT_LAST_FILE));
+				}
+				else if(c2=='4')																		// %Y4: Shows last printed file
+				{
+					addString(g_szLastPrintedFile);
+				}
+				break;
+			}
+#endif // SDSUPPORT
+
 			case 'Z':																					// %Z1-Z4: Page5 service intervall, %Z5-Z8: Page4 printing/milling time
 			{
-				if(c2=='1')																				// Shows text printing/milling time since last service
+				if(c2=='1')																				// %Z1: Shows text printing/milling time since last service
 				{
 #if FEATURE_SERVICE_INTERVAL
 					addStringP(PSTR(UI_TEXT_SERVICE_TIME));
 #endif // FEATURE_SERVICE_INTERVAL
 				}
-				else if(c2=='2')																		// Shows printing/milling time since last service
+				else if(c2=='2')																		// %Z2: Shows printing/milling time since last service
 				{
 #if FEATURE_SERVICE_INTERVAL
 #if EEPROM_MODE!=0
@@ -1665,7 +1708,7 @@ void UIDisplay::parse(char *txt,bool ram)
 #endif // EEPROM_MODE
 #endif // FEATURE_SERVICE_INTERVAL
 				}
-				else if(c2=='3')																		// Shows text printed filament since last service
+				else if(c2=='3')																		// %Z3: Shows text printed filament since last service
 				{
 #if FEATURE_SERVICE_INTERVAL
 					char	mode = OPERATING_MODE_PRINT;
@@ -1685,7 +1728,7 @@ void UIDisplay::parse(char *txt,bool ram)
 					}
 #endif // FEATURE_SERVICE_INTERVAL
 				}
-				else if(c2=='4')																		// Shows printed filament since last service
+				else if(c2=='4')																		// %Z4: Shows printed filament since last service
 				{
 #if FEATURE_SERVICE_INTERVAL
 					char	mode = OPERATING_MODE_PRINT;
@@ -1709,7 +1752,7 @@ void UIDisplay::parse(char *txt,bool ram)
 					}
 #endif // FEATURE_SERVICE_INTERVAL
 				}
-				else if(c2=='5')																		// Shows text printing/milling time
+				else if(c2=='5')																		// %Z5: Shows text printing/milling time
 				{
 					char	mode = OPERATING_MODE_PRINT;
 
@@ -1727,7 +1770,7 @@ void UIDisplay::parse(char *txt,bool ram)
 						addStringP(PSTR(UI_TEXT_MILL_TIME));
 					}
 				}
-				else if(c2=='6')																		// Shows printing/milling time													
+				else if(c2=='6')																		// %Z6: Shows printing/milling time													
 				{
 #if EEPROM_MODE!=0
 					char	mode = OPERATING_MODE_PRINT;
@@ -1773,7 +1816,7 @@ void UIDisplay::parse(char *txt,bool ram)
 					}
 #endif // EEPROM_MODE
 				}
-				else if(c2=='7')																		// Shows text printed filament
+				else if(c2=='7')																		// %Z7: Shows text printed filament
 				{
 					char	mode = OPERATING_MODE_PRINT;
 
@@ -1791,7 +1834,7 @@ void UIDisplay::parse(char *txt,bool ram)
 						addStringP( PSTR( "" ));
 					}
 				}
-				else if(c2=='8')																		// Shows printed filament
+				else if(c2=='8')																		// %Z8: Shows printed filament
 				{
 					char	mode = OPERATING_MODE_PRINT;
 
@@ -1858,7 +1901,7 @@ void UIDisplay::setStatus(char *txt,bool error,bool force)
     if(!error && Printer::isUIErrorMessage()) return;
 
     uint8_t i=0;
-    while(*txt && i<16)
+    while(*txt && i<20)
         statusMsg[i++] = *txt++;
     statusMsg[i]=0;
 
@@ -3176,6 +3219,110 @@ void UIDisplay::nextPreviousAction(int8_t next)
 		    break;
 		}
 
+#if FEATURE_CONFIGURABLE_HOTEND_TYPE
+			case UI_ACTION_HOTEND_TYPE:
+			{
+				if( PrintLine::linesCount ) 
+				{
+					// the hotend type can not be switched while the printing is in progress
+					if( Printer::debugErrors() )
+					{
+						Com::printFLN( PSTR( "executeAction(): The hotend type can not be switched while the printing is in progress" ) );
+					}
+
+					showError( (void*)ui_text_change_hotend_type, (void*)ui_text_operation_denied );
+					break;
+				}
+
+				// the RF1000 supports the hotends V1, V2 and V3
+				// the RF2000 supports the hotends V2 and V3
+				switch( Printer::HotendType )
+				{
+					case HOTEND_TYPE_V1:
+					{
+						if( increment )
+						{
+							Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
+						}
+						else
+						{
+							Printer::HotendType = HOTEND_TYPE_V3;
+						}
+						break;
+					}
+					case HOTEND_TYPE_V2_SINGLE:
+					case HOTEND_TYPE_V2_DUAL:
+					{
+						if( increment )
+						{
+							Printer::HotendType = HOTEND_TYPE_V3;
+						}
+						else
+						{
+#if MOTHERBOARD == DEVICE_TYPE_RF1000
+							Printer::HotendType = HOTEND_TYPE_V1;
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
+
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+							Printer::HotendType = HOTEND_TYPE_V3;
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+						}
+						break;
+					}
+					case HOTEND_TYPE_V3:
+					{
+						if( increment )
+						{
+#if MOTHERBOARD == DEVICE_TYPE_RF1000
+							Printer::HotendType = HOTEND_TYPE_V1;
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
+
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+							Printer::HotendType = HOTEND_TYPE_V2_DUAL;
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+						}
+						else
+						{
+#if MOTHERBOARD == DEVICE_TYPE_RF1000
+							Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
+
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+							Printer::HotendType = HOTEND_TYPE_V2_DUAL;
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+						}
+						break;
+					}
+				}
+
+				Printer::updateHotendType();
+
+#if FEATURE_AUTOMATIC_EEPROM_UPDATE
+				HAL::eprSetByte( EPR_RF_HOTEND_TYPE, Printer::HotendType );
+
+#ifdef TEMP_PID
+				for(uint8_t i=0; i<NUM_EXTRUDER; i++)
+				{
+					Extruder*	e = &extruder[i];
+					int			o = i*EEPROM_EXTRUDER_LENGTH+EEPROM_EXTRUDER_OFFSET;
+
+
+					HAL::eprSetByte(  o+EPR_EXTRUDER_DRIVE_MAX,   e->tempControl.pidDriveMax );
+					HAL::eprSetByte(  o+EPR_EXTRUDER_DRIVE_MIN,   e->tempControl.pidDriveMin );
+					HAL::eprSetFloat( o+EPR_EXTRUDER_PID_PGAIN,   e->tempControl.pidPGain );
+					HAL::eprSetFloat( o+EPR_EXTRUDER_PID_IGAIN,   e->tempControl.pidIGain );
+					HAL::eprSetFloat( o+EPR_EXTRUDER_PID_DGAIN,   e->tempControl.pidDGain );
+					HAL::eprSetByte(  o+EPR_EXTRUDER_PID_MAX,	  e->tempControl.pidMax );
+					HAL::eprSetByte(  o+EPR_EXTRUDER_SENSOR_TYPE, e->tempControl.sensorType );
+				}
+#endif // TEMP_PID
+
+				EEPROM::updateChecksum();
+#endif // FEATURE_AUTOMATIC_EEPROM_UPDATE
+				break;
+			}
+#endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
+
 #if FEATURE_RGB_LIGHT_EFFECTS
 		case UI_ACTION_RGB_LIGHT_MODE:
 		{
@@ -3850,7 +3997,7 @@ void UIDisplay::executeAction(int action)
 #endif // FEATURE_AUTOMATIC_EEPROM_UPDATE
 				break;
 			}
-
+/*
 #if FEATURE_CONFIGURABLE_HOTEND_TYPE
 			case UI_ACTION_HOTEND_TYPE:
 			{
@@ -3871,13 +4018,15 @@ void UIDisplay::executeAction(int action)
 
 				if( Printer::HotendType == HOTEND_TYPE_V1 )
 				{
+					if( increment )
+					{
 #if MOTHERBOARD == DEVICE_TYPE_RF1000
 					Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
 #endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 					Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 
 #ifdef TEMP_PID
 #if NUM_EXTRUDER>0
@@ -3956,7 +4105,7 @@ void UIDisplay::executeAction(int action)
 				break;
 			}
 #endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
-
+*/
 #if FEATURE_CONFIGURABLE_MILLER_TYPE
 			case UI_ACTION_MILLER_TYPE:
 			{
@@ -4256,12 +4405,16 @@ void UIDisplay::executeAction(int action)
 			}
 			case UI_ACTION_SD_PAUSE:
 			{
+#if FEATURE_PAUSE_PRINTING
 				pausePrint();
+#endif // FEATURE_PAUSE_PRINTING
 				break;
 			}
 			case UI_ACTION_SD_CONTINUE:
 			{
+#if FEATURE_PAUSE_PRINTING
 				continuePrint();
+#endif // FEATURE_PAUSE_PRINTING
 				break;
 			}
 

@@ -266,6 +266,7 @@ public:
 	FSTRINGVAR(tEPRRetractionWhenHeating)
 	FSTRINGVAR(tEPRDistanceRetractHeating)
 	FSTRINGVAR(tEPRExtruderCoolerSpeed)
+	FSTRINGVAR(tEPRSensorType)
 	FSTRINGVAR(tEPRAdvanceK)
 	FSTRINGVAR(tEPRAdvanceL)
 	FSTRINGVAR(tEPRBeeperMode)

@@ -365,8 +365,9 @@ public:
 
     void addInt(int value,uint8_t digits,char fillChar=' '); // Print int into printCols
     void addLong(long value,char digits);
-    void addFloat(float number, char fixdigits,uint8_t digits);
+    void addFloat(float number,char fixdigits,uint8_t digits);
     void addStringP(PGM_P text);
+    void addString(char *text);
     void okAction();
 	void rightAction();
     void nextPreviousAction(int8_t next);
@@ -476,7 +477,7 @@ void ui_check_slow_keys(int &action) {}
 #endif // MOTHERBOARD == DEVICE_TYPE_RF1000
 
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 #define UI_HAS_KEYS						  1		// 1 = Some keys attached
 #define UI_HAS_BACK_KEY					  1
 #define UI_DISPLAY_TYPE					  1		// 1 = LCD Display with 4 bit data bus
@@ -530,7 +531,7 @@ void ui_check_keys(int &action)
 inline void ui_check_slow_encoder() {}
 void ui_check_slow_keys(int &action) {}
 #endif // UI_MAIN
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 
 
 #if UI_ROWS==4
@@ -610,6 +611,9 @@ void ui_check_slow_keys(int &action) {}
 #define BEEP_START_WORK_PART_SCAN {}
 #define BEEP_ABORT_WORK_PART_SCAN {}
 #define BEEP_STOP_WORK_PART_SCAN {}
+#define BEEP_START_ALIGN_EXTRUDERS {}
+#define BEEP_ABORT_ALIGN_EXTRUDERS {}
+#define BEEP_STOP_ALIGN_EXTRUDERS {}
 #define BEEP_ABORT_SET_POSITION {}
 #define BEEP_ACCEPT_SET_POSITION {}
 #define	BEEP_SERVICE_INTERVALL {}
@@ -629,6 +633,9 @@ void ui_check_slow_keys(int &action) {}
 #define BEEP_START_WORK_PART_SCAN beep(BEEPER_START_WORK_PART_SCAN_SEQUENCE);
 #define BEEP_ABORT_WORK_PART_SCAN beep(BEEPER_ABORT_WORK_PART_SCAN_SEQUENCE);
 #define BEEP_STOP_WORK_PART_SCAN beep(BEEPER_STOP_WORK_PART_SCAN_SEQUENCE);
+#define BEEP_START_ALIGN_EXTRUDERS beep(BEEPER_START_ALIGN_EXTRUDERS_SEQUENCE);
+#define BEEP_ABORT_ALIGN_EXTRUDERS beep(BEEPER_ABORT_ALIGN_EXTRUDERS_SEQUENCE);
+#define BEEP_STOP_ALIGN_EXTRUDERS beep(BEEPER_STOP_ALIGN_EXTRUDERS_SEQUENCE);
 #define BEEP_ABORT_SET_POSITION beep(BEEPER_ABORT_SET_POSITION_SEQUENCE);
 #define BEEP_ACCEPT_SET_POSITION beep(BEEPER_ACCEPT_SET_POSITION_SEQUENCE);
 #define	BEEP_SERVICE_INTERVALL beep(BEEPER_SERVICE_INTERVALL_SEQUNCE);

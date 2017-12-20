@@ -278,6 +278,7 @@ void Extruder::initExtruder()
             if(!act->enableOn) HAL::digitalWrite(act->enablePin,HIGH);
         }
         act->tempControl.lastTemperatureUpdate = HAL::timeInMilliseconds();
+		act->tempControl.updateTempControlVars();
     }
 
 #if HEATED_BED_HEATER_PIN>-1
@@ -406,6 +407,7 @@ void Extruder::setTemperatureForExtruder(float temperatureInCelsius,uint8_t extr
     if(temperatureInCelsius<0) temperatureInCelsius=0;
     TemperatureController *tc = tempController[extr];
     tc->setTargetTemperature(temperatureInCelsius,0);
+	tc->updateTempControlVars();
     if(beep && temperatureInCelsius>30)
         tc->setAlarm(true);
     if(temperatureInCelsius>=EXTRUDER_FAN_COOL_TEMP) extruder[extr].coolerPWM = extruder[extr].coolerSpeed;
@@ -417,15 +419,25 @@ void Extruder::setTemperatureForExtruder(float temperatureInCelsius,uint8_t extr
 	}
 
 #if FEATURE_CASE_FAN && !CASE_FAN_ALWAYS_ON
-	if( temperatureInCelsius >= CASE_FAN_ON_TEMPERATURE )
+    bool isheating = false;
+
+	for( uint8_t i=0; i<NUM_EXTRUDER; i++ )
 	{
-		// enable the case fan in case the extruder is turned on
+		if( tempController[i]->targetTemperatureC > CASE_FAN_ON_TEMPERATURE )
+		{
+			isheating = true;
+		}
+	}
+
+    if( isheating )
+	{
+		// enable the case fan in case any extruder is turned on
 		Printer::prepareFanOff = 0;
 		WRITE(CASE_FAN_PIN, 1);
 	}
 	else
 	{
-		// disable the case fan in case the extruder is turned off
+		// disable the case fan in case all extruders are turned off
 		if( Printer::fanOffDelay )
 		{
 			// we are going to disable the case fan after the delay
@@ -445,6 +457,7 @@ void Extruder::setTemperatureForExtruder(float temperatureInCelsius,uint8_t extr
     {
         TemperatureController *tc2 = tempController[1];
         tc2->setTargetTemperature(temperatureInCelsius,0);
+		tc2->updateTempControlVars(); 
         if(temperatureInCelsius>=EXTRUDER_FAN_COOL_TEMP) extruder[1].coolerPWM = extruder[1].coolerSpeed;
     }
 #endif // FEATURE_DITTO_PRINTING
@@ -470,6 +483,8 @@ void Extruder::setTemperatureForExtruder(float temperatureInCelsius,uint8_t extr
     if(alloffs && !alloff) // heaters are turned on, start measuring printing time
 	{
         Printer::msecondsPrinting = HAL::timeInMilliseconds();
+		Printer::filamentPrinted = 0;  // new print, new counter  
+		Printer::flag2 &= ~PRINTER_FLAG2_RESET_FILAMENT_USAGE;  
 	}
 
 } // setTemperatureForExtruder
@@ -589,7 +604,7 @@ const short temptable_2[NUMTEMPS_2][2] PROGMEM =
     {849*4, 77*8},{902*4, 65*8},{955*4, 49*8},{1008*4, 17*8},{1020*4, 0*8} //safety
 };
 
-#define NUMTEMPS_3 28
+#define NUMTEMPS_3 28 // EPCOS G550 thermistor
 const short temptable_3[NUMTEMPS_3][2] PROGMEM =
 {
     {1*4,864*8},{21*4,300*8},{25*4,290*8},{29*4,280*8},{33*4,270*8},{39*4,260*8},{46*4,250*8},{54*4,240*8},{64*4,230*8},{75*4,220*8},
@@ -608,7 +623,7 @@ const short temptable_4[NUMTEMPS_4][2] PROGMEM =
 #define NUMTEMPS_8 34
 const short temptable_8[NUMTEMPS_8][2] PROGMEM =
 {
-    {0,8000},{69,2400},{79,2320},{92,2240},{107,2160},{125,2080},{146,2000},{172,1920},{204,1840},{222,1760},{291,1680},{350,1600},
+    {0,8000},{69,2400},{79,2320},{92,2240},{107,2160},{125,2080},{146,2000},{172,1920},{204,1840},{244,1760},{291,1680},{350,1600},
     {422,1520},{511,1440},{621,1360},{755,1280},{918,1200},{1114,1120},{1344,1040},{1608,960},{1902,880},{2216,800},{2539,720},
     {2851,640},{3137,560},{3385,480},{3588,400},{3746,320},{3863,240},{3945,160},{4002,80},{4038,0},{4061,-80},{4075,-160}
 };
@@ -651,6 +666,18 @@ const short temptable_12[NUMTEMPS_12][2] PROGMEM =
     {701*4, 86*8},{736*4, 81*8},{771*4, 76*8},{806*4, 70*8},{841*4, 63*8},{876*4, 56*8},{911*4, 48*8},{946*4, 38*8},{981*4, 23*8},{1005*4, 5*8},{1016*4, 0*8}
 };
 
+#define NUMTEMPS_13 61 // NTC 3950 100k thermistor
+const short temptable_13[NUMTEMPS_13][2] PROGMEM =
+{
+  {23*4, 300*8},{25*4, 295*8},{27*4, 290*8},{28*4, 285*8},{31*4, 280*8},{33*4, 275*8},{35*4, 270*8},{38*4, 265*8},{41*4, 260*8},{44*4, 255*8},
+  {48*4, 250*8},{52*4, 245*8},{56*4, 240*8},{61*4, 235*8},{66*4, 230*8},{71*4, 225*8},{78*4, 220*8},{84*4, 215*8},{92*4, 210*8},{100*4, 205*8},
+  {109*4, 200*8},{120*4, 195*8},{131*4, 190*8},{143*4, 185*8},{156*4, 180*8},{171*4, 175*8},{187*4, 170*8},{205*4, 165*8},{224*4, 160*8},{245*4, 155*8},
+  {268*4, 150*8},{293*4, 145*8},{320*4, 140*8},{348*4, 135*8},{379*4, 130*8},{411*4, 125*8},{445*4, 120*8},{480*4, 115*8},{516*4, 110*8},{553*4, 105*8},
+  {591*4, 100*8},{628*4, 95*8},{665*4, 90*8},{702*4, 85*8},{737*4, 80*8},{770*4, 75*8},{801*4, 70*8},{830*4, 65*8},{857*4, 60*8},{881*4, 55*8},
+  {903*4, 50*8},{922*4, 45*8},{939*4, 40*8},{954*4, 35*8},{966*4, 30*8},{977*4, 25*8},{985*4, 20*8},{993*4, 15*8},{999*4, 10*8},{1004*4, 5*8},
+  {1008*4, 0*8}
+};
+
 #if NUM_TEMPS_USERTHERMISTOR0>0
 const short temptable_5[NUM_TEMPS_USERTHERMISTOR0][2] PROGMEM = USER_THERMISTORTABLE0 ;
 #endif // NUM_TEMPS_USERTHERMISTOR0>0
@@ -663,7 +690,7 @@ const short temptable_6[NUM_TEMPS_USERTHERMISTOR1][2] PROGMEM = USER_THERMISTORT
 const short temptable_7[NUM_TEMPS_USERTHERMISTOR2][2] PROGMEM = USER_THERMISTORTABLE2 ;
 #endif // NUM_TEMPS_USERTHERMISTOR2>0
 
-const short * const temptables[12] PROGMEM = {(short int *)&temptable_1[0][0],(short int *)&temptable_2[0][0],(short int *)&temptable_3[0][0],(short int *)&temptable_4[0][0]
+const short * const temptables[13] PROGMEM = {(short int *)&temptable_1[0][0],(short int *)&temptable_2[0][0],(short int *)&temptable_3[0][0],(short int *)&temptable_4[0][0]
 #if NUM_TEMPS_USERTHERMISTOR0>0
         ,(short int *)&temptable_5[0][0]
 #else
@@ -687,9 +714,10 @@ const short * const temptables[12] PROGMEM = {(short int *)&temptable_1[0][0],(s
         ,(short int *)&temptable_10[0][0]
         ,(short int *)&temptable_11[0][0]
         ,(short int *)&temptable_12[0][0]
+        ,(short int *)&temptable_13[0][0]
                                              };
-const uint8_t temptables_num[12] PROGMEM = {NUMTEMPS_1,NUMTEMPS_2,NUMTEMPS_3,NUMTEMPS_4,NUM_TEMPS_USERTHERMISTOR0,NUM_TEMPS_USERTHERMISTOR1,NUM_TEMPS_USERTHERMISTOR2,NUMTEMPS_8,
-                                 NUMTEMPS_9,NUMTEMPS_10,NUMTEMPS_11,NUMTEMPS_12
+const uint8_t temptables_num[13] PROGMEM = {NUMTEMPS_1,NUMTEMPS_2,NUMTEMPS_3,NUMTEMPS_4,NUM_TEMPS_USERTHERMISTOR0,NUM_TEMPS_USERTHERMISTOR1,NUM_TEMPS_USERTHERMISTOR2,NUMTEMPS_8,
+                                 NUMTEMPS_9,NUMTEMPS_10,NUMTEMPS_11,NUMTEMPS_12,NUMTEMPS_13
                                            };
 
 
@@ -699,7 +727,7 @@ void TemperatureController::updateCurrentTemperature()
 
 
     // get raw temperature
-    switch(type)
+    switch(sensorType)
     {
 #if ANALOG_INPUTS>0
 		case 1:
@@ -714,6 +742,7 @@ void TemperatureController::updateCurrentTemperature()
 		case 10:
 		case 11:
 		case 12:
+		case 13:
 		case 97:
 		case 98:
 		case 99:
@@ -739,7 +768,7 @@ void TemperatureController::updateCurrentTemperature()
 		}
     }
 
-	switch(type)
+	switch(sensorType)
     {
 		case 1:
 		case 2:
@@ -753,6 +782,7 @@ void TemperatureController::updateCurrentTemperature()
 		case 10:
 		case 11:
 		case 12:
+		case 13:
 		{
 			type--;
 			uint8_t num = pgm_read_byte(&temptables_num[type])<<1;
@@ -994,6 +1024,7 @@ void TemperatureController::setTargetTemperature(float target, float offset)
 		case 10:
 		case 11:
 		case 12:
+		case 13:
 		{
 			type--;
 			uint8_t num = pgm_read_byte(&temptables_num[type])<<1;

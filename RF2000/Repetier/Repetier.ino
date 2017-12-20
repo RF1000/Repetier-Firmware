@@ -18,7 +18,7 @@
 
 /**
 \mainpage Repetier-Firmware for Arduino based RepRaps
-<CENTER>Copyright &copy; 2011-2016 by repetier and Conrad Electronic SE
+<CENTER>Copyright &copy; 2011-2017 by repetier and Conrad Electronic SE
 </CENTER>
 
 \section Intro Introduction

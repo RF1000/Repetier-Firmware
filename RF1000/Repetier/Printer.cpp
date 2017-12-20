@@ -53,6 +53,7 @@ long			Printer::queuePositionTargetSteps[4];
 float			Printer::originOffsetMM[3] = {0,0,0};
 uint8_t			Printer::flag0 = 0;
 uint8_t			Printer::flag1 = 0;
+uint8_t			Printer::flag2 = 0;
 
 #if ALLOW_EXTENDED_COMMUNICATION < 2
 uint8_t			Printer::debugLevel = 0; ///< Bitfield defining debug output. 1 = echo, 2 = info, 4 = error, 8 = dry run., 16 = Only communication, 32 = No moves
@@ -91,7 +92,6 @@ unsigned int	Printer::vMaxReached;									///< Maximum reached speed
 unsigned long	Printer::msecondsPrinting;								///< Milliseconds of printing time (means time with heated extruder)
 unsigned long	Printer::msecondsMilling;								///< Milliseconds of milling time
 float			Printer::filamentPrinted;								///< mm of filament printed since counting started
-uint8_t			Printer::wasLastHalfstepping;							///< Indicates if last move had halfstepping enabled
 long			Printer::ZOffset;										///< Z Offset in um
 char			Printer::ZMode				 = DEFAULT_Z_SCALE_MODE;	///< Z Scale  1 = show the z-distance to z-min (print) or to the z-origin (mill), 2 = show the z-distance to the surface of the heat bed (print) or work part (mill)
 char			Printer::moveMode[3];									///< move mode which is applied within the Position X/Y/Z menus
@@ -252,7 +252,15 @@ void Printer::constrainQueueDestinationCoords()
 
 void Printer::constrainDirectDestinationCoords()
 {
-    if(isNoDestinationCheck()) return;
+    if( isNoDestinationCheck() )
+	{
+		return;
+	}
+	if( g_pauseStatus != PAUSE_STATUS_NONE )
+	{
+		// the pause-and-continue functionality must calculate the constrains by itself
+		return;
+	}
 
 #if FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
 #if max_software_endstop_x == true
@@ -326,6 +334,104 @@ void Printer::updateDerivedParameter()
     Printer::updateAdvanceFlags();
 
 } // updateDerivedParameter
+
+
+#if FEATURE_CONFIGURABLE_HOTEND_TYPE
+void Printer::updateHotendType()
+{
+	Extruder *e;
+
+
+#ifdef TEMP_PID
+	switch( Printer::HotendType )
+	{
+		case HOTEND_TYPE_V1:
+		{
+#if NUM_EXTRUDER>0
+			e = &extruder[0];
+
+			e->tempControl.pidDriveMax = HT2_PID_INTEGRAL_DRIVE_MAX;
+			e->tempControl.pidDriveMin = HT2_PID_INTEGRAL_DRIVE_MIN;
+			e->tempControl.pidPGain	   = HT2_PID_P;
+			e->tempControl.pidIGain    = HT2_PID_I;
+			e->tempControl.pidDGain    = HT2_PID_D;
+			e->tempControl.pidMax	   = EXT0_PID_MAX;
+			e->tempControl.sensorType  = 3;
+#endif // NUM_EXTRUDER>0
+
+#if NUM_EXTRUDER>1
+			e = &extruder[1];
+
+			e->tempControl.pidDriveMax = HT2_PID_INTEGRAL_DRIVE_MAX;
+			e->tempControl.pidDriveMin = HT2_PID_INTEGRAL_DRIVE_MIN;
+			e->tempControl.pidPGain	   = HT2_PID_P;
+			e->tempControl.pidIGain    = HT2_PID_I;
+			e->tempControl.pidDGain    = HT2_PID_D;
+			e->tempControl.pidMax	   = EXT1_PID_MAX;
+			e->tempControl.sensorType  = 3;
+#endif // NUM_EXTRUDER>1
+			break;
+		}
+		case HOTEND_TYPE_V2_SINGLE:
+		case HOTEND_TYPE_V2_DUAL:
+		{
+#if NUM_EXTRUDER>0
+			e = &extruder[0];
+
+			e->tempControl.pidDriveMax = HT3_PID_INTEGRAL_DRIVE_MAX;
+			e->tempControl.pidDriveMin = HT3_PID_INTEGRAL_DRIVE_MIN;
+			e->tempControl.pidPGain	   = HT3_PID_P;
+			e->tempControl.pidIGain    = HT3_PID_I;
+			e->tempControl.pidDGain    = HT3_PID_D;
+			e->tempControl.pidMax	   = EXT0_PID_MAX;
+			e->tempControl.sensorType  = 3;
+#endif // #if NUM_EXTRUDER>0
+
+#if NUM_EXTRUDER>1
+			e = &extruder[1];
+
+			e->tempControl.pidDriveMax = HT3_PID_INTEGRAL_DRIVE_MAX;
+			e->tempControl.pidDriveMin = HT3_PID_INTEGRAL_DRIVE_MIN;
+			e->tempControl.pidPGain	   = HT3_PID_P;
+			e->tempControl.pidIGain    = HT3_PID_I;
+			e->tempControl.pidDGain    = HT3_PID_D;
+			e->tempControl.pidMax	   = EXT1_PID_MAX;
+			e->tempControl.sensorType  = 3;
+#endif // #if NUM_EXTRUDER>1
+			break;
+		}
+		case HOTEND_TYPE_V3:
+		{
+#if NUM_EXTRUDER>0
+			e = &extruder[0];
+
+			e->tempControl.pidDriveMax = HT4_PID_INTEGRAL_DRIVE_MAX;
+			e->tempControl.pidDriveMin = HT4_PID_INTEGRAL_DRIVE_MIN;
+			e->tempControl.pidPGain	   = HT4_PID_P;
+			e->tempControl.pidIGain    = HT4_PID_I;
+			e->tempControl.pidDGain    = HT4_PID_D;
+			e->tempControl.pidMax	   = EXT0_PID_MAX;
+			e->tempControl.sensorType  = 13;
+#endif // #if NUM_EXTRUDER>0
+
+#if NUM_EXTRUDER>1
+			e = &extruder[1];
+
+			e->tempControl.pidDriveMax = HT4_PID_INTEGRAL_DRIVE_MAX;
+			e->tempControl.pidDriveMin = HT4_PID_INTEGRAL_DRIVE_MIN;
+			e->tempControl.pidPGain	   = HT4_PID_P;
+			e->tempControl.pidIGain    = HT4_PID_I;
+			e->tempControl.pidDGain    = HT4_PID_D;
+			e->tempControl.pidMax	   = EXT1_PID_MAX;
+			e->tempControl.sensorType  = 13;
+#endif // #if NUM_EXTRUDER>1
+			break;
+		}
+	}
+#endif // TEMP_PID
+
+} // updateHotendType
+#endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
 
 
 /** \brief Stop heater and stepper motors. Disable power,if possible. */
@@ -1015,7 +1121,6 @@ void Printer::setup()
 	msecondsMilling = 0;
     filamentPrinted = 0;
     flag0 = PRINTER_FLAG0_STEPPER_DISABLED;
-    wasLastHalfstepping = 0;
 
 	moveMode[X_AXIS] = DEFAULT_MOVE_MODE_X;
 	moveMode[Y_AXIS] = DEFAULT_MOVE_MODE_Y;
@@ -1151,10 +1256,14 @@ void Printer::setup()
     EEPROM::initBaudrate();
     HAL::serialSetBaudrate(baudrate);
 
-	if( Printer::debugInfo() )
-	{
-	    Com::printFLN(Com::tStart);
-	}
+	// sending of this information tells the Repetier-Host that the firmware has restarted - never delete or change this to-be-sent information
+	Com::printFLN(PSTR( "") );
+    Com::printFLN(Com::tStart);
+
+#if SDSUPPORT
+	memset( g_szLastPrintedFile, 0, MAX_FILE_NAME_LENGTH );
+	memset( g_szCurrentlyPrintedFile, 0, MAX_FILE_NAME_LENGTH );
+#endif // SDSUPPORT
 
 	UI_INITIALIZE;
 
@@ -1682,11 +1791,13 @@ void Printer::homeAxis(bool xaxis,bool yaxis,bool zaxis) // home non-delta print
 
 bool Printer::allowQueueMove( void )
 {
+#if FEATURE_PAUSE_PRINTING
 	if( (g_pauseStatus != PAUSE_STATUS_NONE && g_pauseStatus != PAUSE_STATUS_WAIT_FOR_QUEUE_MOVE) && !PrintLine::cur )
 	{
 		// do not allow to process new moves from the queue while the printing is paused
 		return false;
 	}
+#endif // FEATURE_PAUSE_PRINTING
 
 	if( !PrintLine::hasLines() )
 	{
@@ -1807,9 +1918,15 @@ void Printer::performZCompensation( void )
 	{
 		if( PrintLine::cur->isZMove() )
 		{
-			// do not peform any compensation while there is a "real" move into z-direction
+			// do not peform any compensation while there is a queue move into z-direction
 			return;
 		}
+	}
+
+	if( Printer::directPositionCurrentSteps[Z_AXIS] != Printer::directPositionTargetSteps[Z_AXIS] )
+	{
+		// do not perform any compensation while there is a direct move into z-direction
+		return;
 	}
 
 	if( endZCompensationStep )

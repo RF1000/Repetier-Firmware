@@ -99,9 +99,9 @@ void EEPROM::restoreEEPROMSettingsFromConfiguration()
 #if MOTHERBOARD == DEVICE_TYPE_RF1000
 	Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
 #endif // MOTHERBOARD == DEVICE_TYPE_RF1000
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 	Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 #endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
 
 	Printer::maxJerk = MAX_JERK;
@@ -374,9 +374,18 @@ void EEPROM::restoreEEPROMSettingsFromConfiguration()
 #endif // USE_ADVANCE
 #endif // NUM_EXTRUDER > 5
 
-    Printer::updateDerivedParameter();
+#if FEATURE_CONFIGURABLE_HOTEND_TYPE
+	// we do not call updateHotendType() here because somebody might have fine-tuned his settings within the EEPROM after choosing of the proper hotend type
+	//Printer::updateHotendType();
+#endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
+
+	Printer::updateDerivedParameter();
     Extruder::selectExtruderById(Extruder::current->id);
     Extruder::initHeatedBed();
+
+#if SDSUPPORT
+	memset( g_szLastPrintedFile, 0, MAX_FILE_NAME_LENGTH );
+#endif // SDSUPPORT
 
 	if( Printer::debugInfo() )
 	{
@@ -387,6 +396,7 @@ void EEPROM::restoreEEPROMSettingsFromConfiguration()
 	{
 	    Com::printErrorF(Com::tNoEEPROMSupport);
 	}
+
 #endif // EEPROM_MODE!=0
 
 } // restoreEEPROMSettingsFromConfiguration
@@ -549,7 +559,9 @@ void EEPROM::storeDataIntoEEPROM(uint8_t corrupted)
         HAL::eprSetFloat(o+EPR_EXTRUDER_ADVANCE_K,0);
         HAL::eprSetFloat(o+EPR_EXTRUDER_ADVANCE_L,0);
 #endif // USE_ADVANCE
-    }
+
+		HAL::eprSetByte(o+EPR_EXTRUDER_SENSOR_TYPE,e->tempControl.sensorType);
+	}
 
     if(corrupted)
     {
@@ -618,6 +630,10 @@ void EEPROM::storeDataIntoEEPROM(uint8_t corrupted)
 #if FEATURE_CONFIGURABLE_MILLER_TYPE
 	HAL::eprSetByte( EPR_RF_MILLER_TYPE, Printer::MillerType );
 #endif // FEATURE_CONFIGURABLE_MILLER_TYPE
+
+#if SDSUPPORT
+	writeLastPrintedFile();
+#endif // SDSUPPORT
 
 	// Save version and build checksum
     HAL::eprSetByte(EPR_VERSION,EEPROM_PROTOCOL_VERSION);
@@ -753,7 +769,9 @@ void EEPROM::readDataFromEEPROM()
 
         if(version>1)
             e->coolerSpeed = HAL::eprGetByte(o+EPR_EXTRUDER_COOLER_SPEED);
-    }
+
+		e->tempControl.sensorType = HAL::eprGetByte(o+EPR_EXTRUDER_SENSOR_TYPE);
+	}
 
 #if FEATURE_BEEPER
 	Printer::enableBeeper = HAL::eprGetByte( EPR_RF_BEEPER_MODE );
@@ -813,21 +831,28 @@ void EEPROM::readDataFromEEPROM()
 
 #if FEATURE_CONFIGURABLE_HOTEND_TYPE
 	Printer::HotendType = HAL::eprGetByte( EPR_RF_HOTEND_TYPE );
-	if( Printer::HotendType < HOTEND_TYPE_1 || Printer::HotendType == HOTEND_TYPE_V2_DUAL )
+	if( Printer::HotendType < HOTEND_TYPE_1 || Printer::HotendType > HOTEND_TYPE_V3 )
 	{
 #if MOTHERBOARD == DEVICE_TYPE_RF1000
 		Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
 #endif // MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 		Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
 	}
+
+	// we do not call updateHotendType() here because somebody might have fine-tuned his settings within the EEPROM after choosing of the proper hotend type
+	//Printer::updateHotendType();
 #endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
 
 #if FEATURE_CONFIGURABLE_MILLER_TYPE
 	Printer::MillerType = HAL::eprGetByte( EPR_RF_MILLER_TYPE ) == MILLER_TYPE_ONE_TRACK ? MILLER_TYPE_ONE_TRACK : MILLER_TYPE_TWO_TRACKS;
 #endif // FEATURE_CONFIGURABLE_MILLER_TYPE
+
+#if SDSUPPORT
+	readLastPrintedFile();
+#endif // SDSUPPORT
 
 	if(version!=EEPROM_PROTOCOL_VERSION)
     {
@@ -889,7 +914,7 @@ void EEPROM::updatePrinterUsage()
 #if FEATURE_MILLING_MODE
 	if( Printer::operatingMode == OPERATING_MODE_PRINT )
 	{
-		if(Printer::filamentPrinted==0) return; // No miles only enabled
+		if(Printer::filamentPrinted == 0 || (Printer::flag2 & PRINTER_FLAG2_RESET_FILAMENT_USAGE) != 0) return; // No miles only enabled  
 		uint32_t seconds = (HAL::timeInMilliseconds()-Printer::msecondsPrinting)/1000;
 		seconds += HAL::eprGetInt32(EPR_PRINTING_TIME);
 		HAL::eprSetInt32(EPR_PRINTING_TIME,seconds);
@@ -902,7 +927,7 @@ void EEPROM::updatePrinterUsage()
 		HAL::eprSetFloat(EPR_PRINTING_DISTANCE_SERVICE,HAL::eprGetFloat(EPR_PRINTING_DISTANCE_SERVICE)+Printer::filamentPrinted*0.001);
 #endif // FEATURE_SERVICE_INTERVAL
 
-		Printer::filamentPrinted = 0;
+		Printer::flag2 |= PRINTER_FLAG2_RESET_FILAMENT_USAGE;
 		Printer::msecondsPrinting = HAL::timeInMilliseconds();
 		uint8_t newcheck = computeChecksum();
 		if(newcheck!=HAL::eprGetByte(EPR_INTEGRITY_BYTE))
@@ -1112,7 +1137,9 @@ void EEPROM::writeSettings()
 #endif // ENABLE_QUADRATIC_ADVANCE
         writeFloat(o+EPR_EXTRUDER_ADVANCE_L,Com::tEPRAdvanceL);
 #endif // USE_ADVANCE
-    }
+
+	    writeByte(o+EPR_EXTRUDER_SENSOR_TYPE,Com::tEPRSensorType);
+	}
 
 	// RF specific
 #if FEATURE_BEEPER
@@ -1246,5 +1273,34 @@ void EEPROM::writeByte(uint pos,PGM_P text)
     Com::printFLN(text);
 
 } // writeByte
+
+
+void EEPROM::writeLastPrintedFile(void)
+{
+	int		i;
+
+
+	for( i=0; i<MAX_FILE_NAME_LENGTH; i++ )
+	{
+		HAL::eprSetByte( EPR_RF_LAST_PRINTED_FILE +i, g_szLastPrintedFile[i] );
+	}
+	return;
+
+} // writeLastPrintedFile
+
+
+void EEPROM::readLastPrintedFile(void)
+{
+	int		i;
+
+
+	for( i=0; i<MAX_FILE_NAME_LENGTH; i++ )
+	{
+		g_szLastPrintedFile[i] = HAL::eprGetByte( EPR_RF_LAST_PRINTED_FILE +i );
+	}
+	return;
+
+} // readLastPrintedFile
+
 #endif // EEPROM_MODE!=0
 
