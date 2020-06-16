@@ -125,6 +125,7 @@ If EEPROM is enabled these values will be overidden with the values in the EEPRO
 #endif // NUM_EXTRUDER == 2
 
 #define X_MAX_LENGTH_MILL					(long)230
+#define X_MAX_LENGTH_OFFSET					(long) 30
 #define Y_MAX_LENGTH						(long)245
 #define Z_MAX_LENGTH						(long)200
 
