@@ -44,6 +44,8 @@ To override EEPROM settings with config settings, set EEPROM_MODE 0 */
 
 /** \brief Define the type of your device */
 #define MOTHERBOARD							DEVICE_TYPE_RF1000
+//#define MOTHERBOARD							DEVICE_TYPE_RF2000
+//#define MOTHERBOARD							DEVICE_TYPE_RF2000v2
 #define PROTOTYPE_PCB						0													// 1 = first PCB's / 0 = Final
 
 /** \brief EEPROM storage mode
@@ -55,7 +57,7 @@ matches, the stored values are used to overwrite the settings.
 
 IMPORTANT: With mode <>0 some changes in Configuration.h are not set any more, as they are
            taken from the EEPROM. */
-#define EEPROM_MODE							139
+#define EEPROM_MODE							44
 
 
 // ##########################################################################################
@@ -797,6 +799,66 @@ we use blocks of 2 kByte size for the structure of our EEPROM
 
 
 // ##########################################################################################
+// ##	Hotend V1
+// ##########################################################################################
+
+/** \brief The maximum value, I-gain can contribute to the output. */
+#define HT2_PID_INTEGRAL_DRIVE_MAX			130
+
+/** \brief lower value for integral part. */
+#define HT2_PID_INTEGRAL_DRIVE_MIN			60
+
+/** \brief P-gain. */
+#define HT2_PID_P							37.52
+
+/** \brief I-gain. */
+#define HT2_PID_I							10
+
+/** \brief Dgain. */
+#define HT2_PID_D							35.18
+
+
+// ##########################################################################################
+// ##	Hotend V2
+// ##########################################################################################
+
+/** \brief The maximum value, I-gain can contribute to the output. */
+#define HT3_PID_INTEGRAL_DRIVE_MAX			120
+
+/** \brief lower value for integral part. */
+#define HT3_PID_INTEGRAL_DRIVE_MIN			30
+
+/** \brief P-gain. */
+#define HT3_PID_P							9.06
+
+/** \brief I-gain. */
+#define HT3_PID_I							1.85
+
+/** \brief Dgain. */
+#define HT3_PID_D							11.10
+
+
+// ##########################################################################################
+// ##	Hotend V3
+// ##########################################################################################
+
+/** \brief The maximum value, I-gain can contribute to the output. */
+#define HT4_PID_INTEGRAL_DRIVE_MAX			120
+
+/** \brief lower value for integral part. */
+#define HT4_PID_INTEGRAL_DRIVE_MIN			30
+
+/** \brief P-gain. */
+#define HT4_PID_P							98.0
+
+/** \brief I-gain. */
+#define HT4_PID_I							0.63
+
+/** \brief Dgain. */
+#define HT4_PID_D							132.0
+
+
+// ##########################################################################################
 // ##	miscellaneous configurations
 // ##########################################################################################
 
@@ -859,7 +921,11 @@ The TPS3820 of the RF1000/RF2000 resets about 112/200/310 (min/typical/max) ms a
 /** \brief PID control only works target temperature +/- PID_CONTROL_RANGE.
 If you get much overshoot at the first temperature set, because the heater is going full power too long, you
 need to increase this value. For one 6.8 Ohm heater 10 is ok. With two 6.8 Ohm heater use 15. */
-#define PID_CONTROL_RANGE					20
+#define PID_CONTROL_RANGE					30
+
+/** \brief If you change those you might have to do fresh autotunePIDs on your heaters. */
+#define PID_CONTROL_DRIVE_MAX_LIMIT_FACTOR  10.0f
+#define PID_CONTROL_DRIVE_MIN_LIMIT_FACTOR  -1.0f		//-1.0 works well with drive max 100 and drive min 5. If this number is negative you get a real PID control.
 
 /** \brief Prevent extrusions longer then x mm for one command. This is especially important if you abort a print. Then the
 extrusion position might be at any value like 23344. If you then have an G1 E-2 it will roll back 23 meter! */
@@ -878,7 +944,7 @@ If your EXT0_PID_MAX is low, you should prefer the second method. */
 /** \brief Temperature range for target temperature to hold in M109 command. 5 means +/-5 degC
 Uncomment define to force the temperature into the range for given watchperiod. */
 //#define TEMP_HYSTERESIS					5
-#define	TEMP_TOLERANCE						2.0													// [°C]
+#define	TEMP_TOLERANCE						2.0														// [°C]
 
 /** \brief Bits of the ADC converter */
 #define ANALOG_INPUT_BITS					10
@@ -960,6 +1026,5 @@ and it is elsewise difficult to know, what your reprap is currently doing. */
 
 /** \brief Defines the default z scale */
 #define DEFAULT_Z_SCALE_MODE				Z_VALUE_MODE_Z_MIN
-
 
 #endif // CONFIGURATION_H

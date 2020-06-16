@@ -337,9 +337,9 @@
 
 
 // ##########################################################################################
-// ##	RF2000 V2 pin assignment
+// ##	RF2000v2 pin assignment
 // ##########################################################################################
-#if MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000v2
   #define KNOWN_BOARD 1
 
   #if !defined(__AVR_ATmega1280__) && !defined(__AVR_ATmega2560__)
@@ -487,7 +487,7 @@
 #define DEBUG_TEST_J0_PIN		15	// PINJ.0, 63, PJ0
 
 
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 
 #ifndef SDSSORIG

@@ -797,6 +797,11 @@ UI_STRING(ui_text_hotend_v3,UI_TEXT_HOTEND_V3);
 UI_STRING(ui_text_miller_one_track,UI_TEXT_MILLER_ONE_TRACK);
 UI_STRING(ui_text_miller_two_tracks,UI_TEXT_MILLER_TWO_TRACKS);
 UI_STRING(ui_text_z_compensation_active,UI_TEXT_Z_COMPENSATION_ACTIVE);
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
+UI_STRING(ui_text_left_extruder,UI_TEXT_LEFT_EXTRUDER);
+UI_STRING(ui_text_right_extruder,UI_TEXT_RIGHT_EXTRUDER);
+UI_STRING(ui_text_dual_extruder,UI_TEXT_DUAL_EXTRUDER);
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 
 void UIDisplay::parse(char *txt,bool ram)
@@ -1397,7 +1402,29 @@ void UIDisplay::parse(char *txt,bool ram)
 					addFloat(Extruder::current->maxAcceleration,5,0);
 				}
 #endif // NUM_EXTRUDER>0
-
+#if NUM_EXTRUDER == 2
+				else if(c2=='N')
+				{																			
+					switch( Printer::selectExtruders )													// %XN : Number Extruder
+					{
+						case LEFT_EXTRUDER:
+						{
+							addStringP(PSTR(UI_TEXT_LEFT_EXTRUDER));
+							break;
+						}
+						case RIGHT_EXTRUDER:
+						{
+							addStringP(PSTR(UI_TEXT_RIGHT_EXTRUDER));
+							break;
+						}
+						case DUAL_EXTRUDER:
+						{
+							addStringP(PSTR(UI_TEXT_DUAL_EXTRUDER));
+							break;
+						}
+					}
+				}
+#endif // NUM_EXTRUDER == 2
 				break;
 			}
 			case 's': // Endstop positions
@@ -2900,6 +2927,23 @@ void UIDisplay::nextPreviousAction(int8_t next)
 		}
 		case UI_ACTION_EXTRUDER0_TEMP:
 		{
+#if NUM_EXTRUDER>1
+			if ( Printer::selectExtruders != RIGHT_EXTRUDER )
+			{
+				int tmp = (int)extruder[0].tempControl.targetTemperatureC;
+				if(tmp<UI_SET_MIN_EXTRUDER_TEMP) tmp = 0;
+				tmp+=increment;
+				if(tmp==1) tmp = UI_SET_MIN_EXTRUDER_TEMP;
+				if(tmp<UI_SET_MIN_EXTRUDER_TEMP) tmp = 0;
+				else if(tmp>UI_SET_MAX_EXTRUDER_TEMP) tmp = UI_SET_MAX_EXTRUDER_TEMP;
+				Extruder::setTemperatureForExtruder(tmp,0);
+			}
+			else
+			{
+				showError( (void*)ui_text_extruder, (void*)ui_text_operation_denied );
+				Com::printFLN( PSTR( "Extruder Temp 0 is not supported because the Extruders setting is set to: Right Extruder" ) );
+			}
+#else
 			int tmp = (int)extruder[0].tempControl.targetTemperatureC;
 			if(tmp<UI_SET_MIN_EXTRUDER_TEMP) tmp = 0;
 			tmp+=increment;
@@ -2907,50 +2951,72 @@ void UIDisplay::nextPreviousAction(int8_t next)
 			if(tmp<UI_SET_MIN_EXTRUDER_TEMP) tmp = 0;
 			else if(tmp>UI_SET_MAX_EXTRUDER_TEMP) tmp = UI_SET_MAX_EXTRUDER_TEMP;
 			Extruder::setTemperatureForExtruder(tmp,0);
+#endif // NUM_EXTRUDER>1
 			break;
 		}
 		case UI_ACTION_EXTRUDER1_TEMP:
 		{
 #if NUM_EXTRUDER>1
-			int tmp = (int)extruder[1].tempControl.targetTemperatureC;
-			tmp+=increment;
-			if(tmp==1) tmp = UI_SET_MIN_EXTRUDER_TEMP;
-			if(tmp<UI_SET_MIN_EXTRUDER_TEMP) tmp = 0;
-			else if(tmp>UI_SET_MAX_EXTRUDER_TEMP) tmp = UI_SET_MAX_EXTRUDER_TEMP;
-			Extruder::setTemperatureForExtruder(tmp,1);
+			if ( Printer::selectExtruders != LEFT_EXTRUDER )
+			{
+				int tmp = (int)extruder[1].tempControl.targetTemperatureC;
+				tmp+=increment;
+				if(tmp==1) tmp = UI_SET_MIN_EXTRUDER_TEMP;
+				if(tmp<UI_SET_MIN_EXTRUDER_TEMP) tmp = 0;
+				else if(tmp>UI_SET_MAX_EXTRUDER_TEMP) tmp = UI_SET_MAX_EXTRUDER_TEMP;
+				Extruder::setTemperatureForExtruder(tmp,1);
+			}
+			else
+			{
+				showError( (void*)ui_text_extruder, (void*)ui_text_operation_denied );
+				Com::printFLN( PSTR( "Extruder Temp 1 is not supported because the Extruders setting is set to: Left Extruder" ) );
+			}
 #endif // NUM_EXTRUDER>1
-
 		    break;
 		}
 
 #if NUM_EXTRUDER>1
 		case UI_ACTION_EXTRUDER_OFFSET_X:
 		{
-			float	fTemp = extruder[1].xOffset / Printer::axisStepsPerMM[X_AXIS];
+			if ( Printer::selectExtruders == DUAL_EXTRUDER )
+			{
+				float	fTemp = extruder[1].xOffset / Printer::axisStepsPerMM[X_AXIS];
 
+				INCREMENT_MIN_MAX(fTemp,0.01,32,36);
+				extruder[1].xOffset = int32_t(fTemp * Printer::axisStepsPerMM[X_AXIS]);
 
-			INCREMENT_MIN_MAX(fTemp,0.01,32,36);
-			extruder[1].xOffset = int32_t(fTemp * Printer::axisStepsPerMM[X_AXIS]);
-
-#if FEATURE_AUTOMATIC_EEPROM_UPDATE
-			HAL::eprSetFloat(EEPROM_EXTRUDER_LENGTH+EEPROM_EXTRUDER_OFFSET+EPR_EXTRUDER_X_OFFSET,fTemp);
-			EEPROM::updateChecksum();
-#endif // FEATURE_AUTOMATIC_EEPROM_UPDATE
+	#if FEATURE_AUTOMATIC_EEPROM_UPDATE
+				HAL::eprSetFloat(EEPROM_EXTRUDER_LENGTH+EEPROM_EXTRUDER_OFFSET+EPR_EXTRUDER_X_OFFSET,fTemp);
+				EEPROM::updateChecksum();
+	#endif // FEATURE_AUTOMATIC_EEPROM_UPDATE
+			}
+			else
+			{
+				showError( (void*)ui_text_extruder, (void*)ui_text_operation_denied );
+				Com::printFLN( PSTR( "Extruder Offset X is not supported because the Extruders setting is not: Dual Extruder" ) );
+			}
 
 			break;
 		}
 		case UI_ACTION_EXTRUDER_OFFSET_Y:
 		{
-			float	fTemp = extruder[1].yOffset / Printer::axisStepsPerMM[Y_AXIS];
+			if ( Printer::selectExtruders == DUAL_EXTRUDER )
+			{
+				float	fTemp = extruder[1].yOffset / Printer::axisStepsPerMM[Y_AXIS];
 
+				INCREMENT_MIN_MAX(fTemp,0.01,-2,2);
+				extruder[1].yOffset = int32_t(fTemp * Printer::axisStepsPerMM[Y_AXIS]);
 
-			INCREMENT_MIN_MAX(fTemp,0.01,-2,2);
-			extruder[1].yOffset = int32_t(fTemp * Printer::axisStepsPerMM[Y_AXIS]);
-
-#if FEATURE_AUTOMATIC_EEPROM_UPDATE
-			HAL::eprSetFloat(EEPROM_EXTRUDER_LENGTH+EEPROM_EXTRUDER_OFFSET+EPR_EXTRUDER_Y_OFFSET,fTemp);
-			EEPROM::updateChecksum();
-#endif // FEATURE_AUTOMATIC_EEPROM_UPDATE
+	#if FEATURE_AUTOMATIC_EEPROM_UPDATE
+				HAL::eprSetFloat(EEPROM_EXTRUDER_LENGTH+EEPROM_EXTRUDER_OFFSET+EPR_EXTRUDER_Y_OFFSET,fTemp);
+				EEPROM::updateChecksum();
+	#endif // FEATURE_AUTOMATIC_EEPROM_UPDATE
+			}
+			else
+			{
+				showError( (void*)ui_text_extruder, (void*)ui_text_operation_denied );
+				Com::printFLN( PSTR( "Extruder Offset Y is not supported because the Extruders setting is not: Dual Extruder" ) );
+			}
 
 			break;
 		}
@@ -3236,17 +3302,22 @@ void UIDisplay::nextPreviousAction(int8_t next)
 
 				// the RF1000 supports the hotends V1, V2 and V3
 				// the RF2000 supports the hotends V2 and V3
+				// the RF2000v2 supports the hotend V3
 				switch( Printer::HotendType )
 				{
 					case HOTEND_TYPE_V1:
 					{
 						if( increment )
 						{
+#if MOTHERBOARD == DEVICE_TYPE_RF1000
 							Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
+#endif // MOTHERBOARD == DEVICE_TYPE_RF1000
 						}
 						else
 						{
+#if MOTHERBOARD == DEVICE_TYPE_RF1000
 							Printer::HotendType = HOTEND_TYPE_V3;
+#endif // MOTHERBOARD == DEVICE_TYPE_RF1000
 						}
 						break;
 					}
@@ -3255,7 +3326,9 @@ void UIDisplay::nextPreviousAction(int8_t next)
 					{
 						if( increment )
 						{
+#if MOTHERBOARD == DEVICE_TYPE_RF1000 || MOTHERBOARD == DEVICE_TYPE_RF2000
 							Printer::HotendType = HOTEND_TYPE_V3;
+#endif // MOTHERBOARD == DEVICE_TYPE_RF1000 || MOTHERBOARD == DEVICE_TYPE_RF2000
 						}
 						else
 						{
@@ -3263,9 +3336,9 @@ void UIDisplay::nextPreviousAction(int8_t next)
 							Printer::HotendType = HOTEND_TYPE_V1;
 #endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000
 							Printer::HotendType = HOTEND_TYPE_V3;
-#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000
 						}
 						break;
 					}
@@ -3277,9 +3350,9 @@ void UIDisplay::nextPreviousAction(int8_t next)
 							Printer::HotendType = HOTEND_TYPE_V1;
 #endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000
 							Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000
 						}
 						else
 						{
@@ -3287,9 +3360,9 @@ void UIDisplay::nextPreviousAction(int8_t next)
 							Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
 #endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000
 							Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000
 						}
 						break;
 					}
@@ -3368,6 +3441,62 @@ void UIDisplay::nextPreviousAction(int8_t next)
 		}
 #endif // FEATURE_RGB_LIGHT_EFFECTS
 
+		case UI_ACTION_EXTRUDERS:
+		{
+			char	deny = 0;
+
+			if( PrintLine::linesCount )		deny = 1;	// the operating mode can not be switched while the printing is in progress
+
+#if FEATURE_HEAT_BED_Z_COMPENSATION
+			if( g_nHeatBedScanStatus )		deny = 1;	// the operating mode can not be switched while a heat bed scan is in progress
+#endif // FEATURE_HEAT_BED_Z_COMPENSATION
+
+			if( deny )
+			{
+				if( Printer::debugErrors() )
+				{
+					Com::printFLN( PSTR( "executeAction(): The extruder mode can not be switched while the printing is in progress" ) );
+				}
+
+				showError( (void*)ui_text_change_mode, (void*)ui_text_operation_denied );
+				break;
+			}
+
+
+			INCREMENT_MIN_MAX( Printer::selectExtruders,1,0,DUAL_EXTRUDER);
+
+			switch ( Printer::selectExtruders )
+			{
+				case LEFT_EXTRUDER:
+				{
+					Extruder::selectExtruderById( 0 );
+					Extruder::setTemperatureForExtruder( 0, 1, false );
+					break;
+				}
+				case RIGHT_EXTRUDER:
+				{
+					Extruder::selectExtruderById( 1 );
+					Extruder::setTemperatureForExtruder( 0, 0, false );
+					break;
+				}
+				case DUAL_EXTRUDER:
+				{
+					Extruder::selectExtruderById(Extruder::current->id);
+					break;
+				}
+			}
+
+			Printer::lengthMM[X_AXIS] = X_MAX_LENGTH_PRINT;
+			HAL::eprSetFloat(EPR_X_LENGTH,Printer::lengthMM[X_AXIS]);
+			EEPROM::updateChecksum();
+			Printer::updateDerivedParameter();
+			
+#if FEATURE_AUTOMATIC_EEPROM_UPDATE
+			HAL::eprSetByte( EPR_RF_EXTRUDERS, Printer::selectExtruders );
+			EEPROM::updateChecksum();
+#endif // FEATURE_AUTOMATIC_EEPROM_UPDATE
+			break;
+		}
 		case UI_ACTION_EXTR_STEPS:
 		{
 			INCREMENT_MIN_MAX(Extruder::current->stepsPerMM,1,1,9999);
@@ -3907,6 +4036,10 @@ void UIDisplay::executeAction(int action)
 				if( g_nTestStrainGaugeStatus )	deny = 1;	// the operating mode can not be switched while the strain gauge is tested
 #endif // FEATURE_TEST_STRAIN_GAUGE
 
+#if NUM_EXTRUDER == 2
+				if( g_nAlignExtrudersStatus )	deny = 1;	// the operating mode can not be switched while the align extruders is in progress
+#endif // NUM_EXTRUDER
+
 				if( deny )
 				{
 					if( Printer::debugErrors() )
@@ -4024,9 +4157,9 @@ void UIDisplay::executeAction(int action)
 					Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
 #endif // #if MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 					Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // #if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 #ifdef TEMP_PID
 #if NUM_EXTRUDER>0
@@ -4145,10 +4278,29 @@ void UIDisplay::executeAction(int action)
 			case UI_ACTION_PREHEAT_PLA:
 			{
 				UI_STATUS_UPD( UI_TEXT_PREHEAT_PLA );
-				Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_PLA,0);
 
 #if NUM_EXTRUDER>1
-				Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_PLA,1);
+				switch ( Printer::selectExtruders )
+				{
+					case LEFT_EXTRUDER:
+					{
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_PLA,0);
+						break;
+					}
+					case RIGHT_EXTRUDER:
+					{
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_PLA,1);
+						break;
+					}
+					case DUAL_EXTRUDER:
+					{
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_PLA,0);
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_PLA,1);
+						break;
+					}
+				}
+#else
+				Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_PLA,0);
 #endif // NUM_EXTRUDER>1
 
 #if NUM_EXTRUDER>2
@@ -4164,10 +4316,29 @@ void UIDisplay::executeAction(int action)
 			case UI_ACTION_PREHEAT_ABS:
 			{
 				UI_STATUS_UPD( UI_TEXT_PREHEAT_ABS );
-				Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_ABS,0);
 
 #if NUM_EXTRUDER>1
-				Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_ABS,1);
+				switch ( Printer::selectExtruders )
+				{
+					case LEFT_EXTRUDER:
+					{
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_ABS,0);
+						break;
+					}
+					case RIGHT_EXTRUDER:
+					{
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_ABS,1);
+						break;
+					}
+					case DUAL_EXTRUDER:
+					{
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_ABS,0);
+						Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_ABS,1);
+						break;
+					}
+				}
+#else
+				Extruder::setTemperatureForExtruder(UI_SET_PRESET_EXTRUDER_TEMP_ABS,0);
 #endif // NUM_EXTRUDER>1
 
 #if NUM_EXTRUDER>2
@@ -4372,8 +4543,16 @@ void UIDisplay::executeAction(int action)
 #if NUM_EXTRUDER == 2
 			case UI_ACTION_ACTIVE_EXTRUDER:
 			{
-				if( Extruder::current->id == 0 )	Extruder::selectExtruderById( 1 );
-				else								Extruder::selectExtruderById( 0 );
+				if ( Printer::selectExtruders == DUAL_EXTRUDER )
+				{
+					if( Extruder::current->id == 0 )	Extruder::selectExtruderById( 1 );
+					else								Extruder::selectExtruderById( 0 );
+				}
+				else
+				{
+					showError( (void*)ui_text_extruder, (void*)ui_text_operation_denied );
+					Com::printFLN( PSTR( "Active Extruder: It is not possible to switch the Extruder" ) );
+				}
 				break;
 			}
 #endif // NUM_EXTRUDER == 2

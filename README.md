@@ -1,11 +1,11 @@
-# RF Firmware for RF1000 and RF2000 devices
+# RF Firmware for RF1000, RF2000 and RF2000v2 devices
 Based on Repetier-Firmware - the fast and user friendly firmware.
 
 ## Installation
 
 The firmware is compiled and downloaded with Arduino V 1.6.5.
 
-## Version RF.01.39 (2017-12-20)
+## Version RF.01.47 (2020-06-16)
 
 * This is the development branch on base of the RF.01.38 stable release.
 
@@ -16,7 +16,7 @@ For documentation please visit [http://www.repetier.com/documentation/repetier-f
 ## Introduction
 
 This variant of the Repetier-firmware has been optimized for the use with the
-Renkforce RF1000 and Renkforce RF2000 3D printers of Conrad Electronic SE.
+Renkforce RF1000, Renkforce RF2000 and Renkforce RF2000v2 3D printers of Conrad Electronic SE.
 The firmware adds functionality which is not available within the standard
 Repetier-firmware and uses the settings which match the available hardware.
 
@@ -38,6 +38,11 @@ RF2000
 * Support for the RF2000 motherboard.
 * Support for the RF2000 feature controller (= 6 additional hardware buttons).
 * Additional M-codes have been defined in order to control the RF2000-specific functionality.
+
+RF2000v2
+* Support for the RF2000v2 motherboard.
+* Support for the RF2000v2 feature controller (= 6 additional hardware buttons).
+* Additional M-codes have been defined in order to control the RF2000v2-specific functionality.
 
 ## Changelog
 

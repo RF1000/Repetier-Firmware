@@ -31,9 +31,9 @@
 #include "RF2000.h"
 #endif // MOTHERBOARD == DEVICE_TYPE_RF2000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000_V2
-#include "RF2000V2.h"
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000v2
+#include "RF2000v2.h"
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 
 #include "pins.h"
@@ -119,6 +119,8 @@ extern uint				osAnalogInputBuildup[ANALOG_INPUTS];
 extern uint8			osAnalogInputPos; // Current sampling position
 extern volatile uint	osAnalogInputValues[ANALOG_INPUTS];
 extern uint8_t			pwm_pos[NUM_EXTRUDER+3]; // 0-NUM_EXTRUDER = Heater 0-NUM_EXTRUDER of extruder, NUM_EXTRUDER = Heated bed, NUM_EXTRUDER+1 Board fan, NUM_EXTRUDER+2 = Fan
+extern uint8_t			fanSpeed;
+extern uint16_t			pwm_pos_16;
 
 #ifdef USE_ADVANCE
 #ifdef ENABLE_QUADRATIC_ADVANCE

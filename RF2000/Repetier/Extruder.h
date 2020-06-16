@@ -62,7 +62,7 @@ public:
     float		tempIStateLimitMax;
     float		tempIStateLimitMin;
     uint8_t		tempPointer;
-    float		tempArray[4];
+    float		tempArray[8];			///< Store the last 8 measurements 
 #endif // TEMP_PID
 
     uint8_t		flags;
@@ -74,7 +74,7 @@ public:
     inline void setAlarm(bool on) {if(on) flags |= TEMPERATURE_CONTROLLER_FLAG_ALARM; else flags &= ~TEMPERATURE_CONTROLLER_FLAG_ALARM;}
 
 #ifdef TEMP_PID
-    void autotunePID(float temp,uint8_t controllerId,bool storeResult);
+    void autotunePID(float temp,uint8_t controllerId,int maxCycles, bool storeValues, int method);
 #endif // TEMP_PID
 
 }; // TemperatureController

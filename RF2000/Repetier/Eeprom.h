@@ -136,6 +136,7 @@ have problems with other modules using the eeprom */
 #define	EPR_RF_MOVE_MODE_Y				1043
 #define	EPR_RF_MOVE_MODE_Z				1044
 #define EPR_RF_Z_MODE					1045
+#define	EPR_RF_EXTRUDERS				1046
 #define	EPR_RF_LAST_PRINTED_FILE		1100	// MAX_FILE_NAME_LENGTH bytes
 
 #define EEPROM_EXTRUDER_OFFSET			200

@@ -385,7 +385,7 @@
 
 
 // ##########################################################################################
-// ##	the following M codes are supported only by the RF2000 and RF2000 V2
+// ##	the following M codes are supported only by the RF2000 and RF2000v2
 // ##########################################################################################
 
 - M3300 [P] [S] - configure the 24V FET outputs ( on/off )
@@ -441,7 +441,7 @@
 
 - M3309 - start/abort to align the two extruders
   - Examples:
-  - M3009 ; moves the heat bed up until it touches the first extruder and beeps afterwards in order to indicate that the extruders can be aligned manually
+  - M3309 ; moves the heat bed up until it touches the first extruder and beeps afterwards in order to indicate that the extruders can be aligned manually
 
 */
 

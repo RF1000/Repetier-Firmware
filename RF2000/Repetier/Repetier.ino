@@ -1,5 +1,6 @@
 /*
-    This file is part of the Repetier-Firmware for RF devices from Conrad Electronic SE.
+    This file is part of the Repetier-Firmware RF.01.47 for RF devices from Conrad Electronic SE.
+	To-be-compiled with Arduino V 1.6.5 and Arduino AVR Boards library V 1.6.5.
 
     Repetier-Firmware is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,7 +19,7 @@
 
 /**
 \mainpage Repetier-Firmware for Arduino based RepRaps
-<CENTER>Copyright &copy; 2011-2017 by repetier and Conrad Electronic SE
+<CENTER>Copyright &copy; 2011-2018 by repetier and Conrad Electronic SE
 </CENTER>
 
 \section Intro Introduction

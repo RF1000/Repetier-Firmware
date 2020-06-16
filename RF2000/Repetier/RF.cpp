@@ -56,6 +56,8 @@ FSTRINGVALUE( ui_text_max_reached, UI_TEXT_MAX_REACHED );
 FSTRINGVALUE( ui_text_temperature_wrong, UI_TEXT_TEMPERATURE_WRONG );
 FSTRINGVALUE( ui_text_timeout, UI_TEXT_TIMEOUT );
 FSTRINGVALUE( ui_text_sensor_error, UI_TEXT_SENSOR_ERROR );
+FSTRINGVALUE( ui_text_heat_bed_scan_completed, UI_TEXT_HEAT_BED_SCAN_DONE );
+FSTRINGVALUE( ui_text_work_part_scan_completed, UI_TEXT_WORK_PART_SCAN_DONE );
 
 
 unsigned long	g_lastTime				   = 0;
@@ -394,7 +396,6 @@ void scanHeatBed( void )
 	static long				nZ;
 	static long				nYDirection;
 	static short			nContactPressure;
-	unsigned char			nLastHeatBedScanStatus = g_nHeatBedScanStatus;
 	short					nTempPressure;
 	long					nTempPosition;
 
@@ -520,26 +521,58 @@ void scanHeatBed( void )
 			}
 			case 10:
 			{
+#if NUM_EXTRUDER == 2
+				switch ( Printer::selectExtruders )
+				{
+					case LEFT_EXTRUDER:
+					case DUAL_EXTRUDER:
+					{
+						// the scan is performed with the left extruder
+						Extruder::selectExtruderById( 0 );
+						break;
+					}
+					case RIGHT_EXTRUDER:
+					{
+						// the scan is performed with the right extruder
+						Extruder::selectExtruderById( 1 );
+						break;
+					}
+
+				}
+#else
 				// the scan is performed with the left extruder
 				Extruder::selectExtruderById( 0 );
+#endif // NUM_EXTRUDER == 2
 
 #if FEATURE_PRECISE_HEAT_BED_SCAN
-				if( g_nHeatBedScanMode == HEAT_BED_SCAN_MODE_PLA )
+				if( g_nHeatBedScanMode )
 				{
-					Extruder::setHeatedBedTemperature( PRECISE_HEAT_BED_SCAN_BED_TEMP_PLA, false);
-					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 0, false);
-
+					if( g_nHeatBedScanMode == HEAT_BED_SCAN_MODE_PLA )
+						Extruder::setHeatedBedTemperature( PRECISE_HEAT_BED_SCAN_BED_TEMP_PLA, false);
+					else if( g_nHeatBedScanMode == HEAT_BED_SCAN_MODE_ABS )
+						Extruder::setHeatedBedTemperature( PRECISE_HEAT_BED_SCAN_BED_TEMP_ABS, false);
 #if NUM_EXTRUDER == 2
-					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 1, false);
-#endif // NUM_EXTRUDER == 2
-				}
-				else if( g_nHeatBedScanMode == HEAT_BED_SCAN_MODE_ABS )
-				{
-					Extruder::setHeatedBedTemperature( PRECISE_HEAT_BED_SCAN_BED_TEMP_ABS, false);
+					switch ( Printer::selectExtruders )
+					{
+						case LEFT_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 0, false);
+							break;
+						}
+						case RIGHT_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 1, false);
+							break;
+						}
+						case DUAL_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 0, false);
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 1, false);
+							break;
+						}
+					}
+#else
 					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 0, false);
-
-#if NUM_EXTRUDER == 2
-					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_SCAN, 1, false);
 #endif // NUM_EXTRUDER == 2
 				}
 #endif // FEATURE_PRECISE_HEAT_BED_SCAN
@@ -1080,7 +1113,7 @@ void scanHeatBed( void )
 				g_nZScanZPosition += moveZ( int(Printer::axisStepsPerMM[Z_AXIS] *5) );
 
 				// move back to the home position
-				Printer::homeAxis( true, true, true);
+				Printer::homeAxis( true, true, true );
 				g_nZScanZPosition =
 				nZ				  = 0;
 
@@ -1204,15 +1237,50 @@ void scanHeatBed( void )
 				}
 
 #if NUM_EXTRUDER == 2
-				// we have to align the two extruders
-				g_nHeatBedScanStatus = 100;
-
-#if DEBUG_HEAT_BED_SCAN == 2
-				if( Printer::debugInfo() )
+				switch ( Printer::selectExtruders )
 				{
-					Com::printFLN( PSTR( "scanHeatBed(): 80 -> 100" ) );
-				}
-#endif // DEBUG_HEAT_BED_SCAN == 2				
+					case LEFT_EXTRUDER:
+					case RIGHT_EXTRUDER:
+					{
+#if FEATURE_PRECISE_HEAT_BED_SCAN
+						if ( g_nHeatBedScanMode )
+						{
+							// we have to determine the z-offset which is caused by different extruder temperatures
+							g_nHeatBedScanStatus = 130;
+#if DEBUG_HEAT_BED_SCAN == 2
+							if( Printer::debugInfo() )
+							{
+								Com::printFLN( PSTR( "scanHeatBed(): 80 -> 130" ) );
+							}
+#endif // DEBUG_HEAT_BED_SCAN == 2
+						}
+						else
+#endif // FEATURE_PRECISE_HEAT_BED_SCAN
+						{
+							// we are done
+							g_nHeatBedScanStatus = 150;
+#if DEBUG_HEAT_BED_SCAN == 2
+							if( Printer::debugInfo() )
+							{
+								Com::printFLN( PSTR( "scanHeatBed(): 80 -> 150" ) );
+							}
+#endif // DEBUG_HEAT_BED_SCAN == 2
+						}
+						break;
+					}
+					case DUAL_EXTRUDER:
+					{
+						// we have to align the two extruders
+						g_nHeatBedScanStatus = 100;
+#if DEBUG_HEAT_BED_SCAN == 2
+						if( Printer::debugInfo() )
+						{
+							Com::printFLN( PSTR( "scanHeatBed(): 80 -> 100" ) );
+						}
+#endif // DEBUG_HEAT_BED_SCAN == 2	
+						break;
+					}
+				}			
 #else
 #if FEATURE_PRECISE_HEAT_BED_SCAN
 				if ( g_nHeatBedScanMode )
@@ -1377,6 +1445,8 @@ void scanHeatBed( void )
 				UI_STATUS_UPD( UI_TEXT_ALIGN_EXTRUDERS );
 				BEEP_ALIGN_EXTRUDERS
 
+				g_lastScanTime = HAL::timeInMilliseconds();
+
 				g_nContinueButtonPressed = 0;
 				g_nHeatBedScanStatus	 = 125;
 
@@ -1393,6 +1463,13 @@ void scanHeatBed( void )
 				// wait until the continue button has been pressed
 				if( !g_nContinueButtonPressed )
 				{
+					unsigned long	uRemainingSeconds;
+					uRemainingSeconds = (HAL::timeInMilliseconds() - g_lastScanTime) / 1000;
+					if( uRemainingSeconds > HEAT_BED_SCAN_ALIGN_EXTRUDERS_DELAY )
+					{
+						g_nHeatBedScanStatus = 145;
+						break;
+					}
 					break;
 				}
 
@@ -1467,18 +1544,54 @@ void scanHeatBed( void )
 #if FEATURE_PRECISE_HEAT_BED_SCAN
 				if ( g_nHeatBedScanMode == HEAT_BED_SCAN_MODE_PLA )
 				{
-					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_PLA, 0, false);
-
 #if NUM_EXTRUDER == 2
-					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_PLA, 1, false);
+					switch ( Printer::selectExtruders )
+					{
+						case LEFT_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_PLA, 0, false);
+							break;
+						}
+						case RIGHT_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_PLA, 1, false);
+							break;
+						}
+						case DUAL_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_PLA, 0, false);
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_PLA, 1, false);
+							break;
+						}
+					}
+#else
+					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_PLA, 0, false);
 #endif // NUM_EXTRUDER == 2
 				}
 				else if ( g_nHeatBedScanMode == HEAT_BED_SCAN_MODE_ABS )
 				{
-					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_ABS, 0, false);
-
 #if NUM_EXTRUDER == 2
-					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_ABS, 1, false);
+					switch ( Printer::selectExtruders )
+					{
+						case LEFT_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_ABS, 0, false);
+							break;
+						}
+						case RIGHT_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_ABS, 1, false);
+							break;
+						}
+						case DUAL_EXTRUDER:
+						{
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_ABS, 0, false);
+							Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_ABS, 1, false);
+							break;
+						}
+					}
+#else
+					Extruder::setTemperatureForExtruder( PRECISE_HEAT_BED_SCAN_EXTRUDER_TEMP_ABS, 0, false);
 #endif // NUM_EXTRUDER == 2
 				}
 #endif // FEATURE_PRECISE_HEAT_BED_SCAN
@@ -1761,7 +1874,9 @@ void scanHeatBed( void )
 				{
 					Com::printFLN( PSTR( "scanHeatBed(): the scan has been completed" ) );
 				}
+
 				UI_STATUS_UPD( UI_TEXT_HEAT_BED_SCAN_DONE );
+				showInformation( (void*)ui_text_heat_bed_scan, (void*)ui_text_heat_bed_scan_completed );
 				BEEP_STOP_HEAT_BED_SCAN
 
 				g_nHeatBedScanStatus = 0;
@@ -1866,7 +1981,7 @@ short testHeatBedTemperature( void )
 				Com::printFLN( PSTR( " C" ) );
 			}
 
-			UI_STATUS_UPD( UI_TEXT_HEATING_UP );
+			UI_STATUS_UPD( UI_TEXT_COOLING_DOWN );
 			return -1;
 		}
 	}
@@ -2197,50 +2312,6 @@ void startAlignExtruders( void )
 			return;
 		}
 
-		if( !Printer::isHomed() )
-		{
-			if( Printer::debugErrors() )
-			{
-				Com::printFLN( PSTR( "M3309: the extruders can not be aligned because the home position is unknown" ) );
-			}
-
-			showError( (void*)ui_text_align_extruders, (void*)ui_text_home_unknown );
-			return;
-		}
-
-		if( Printer::currentZPositionSteps() )
-		{
-			if( Printer::debugErrors() )
-			{
-				Com::printFLN( PSTR( "startAlignExtruders(): the extruders can not be aligned because the z position is not 0" ) );
-			}
-
-			showError( (void*)ui_text_align_extruders, (void*)ui_text_operation_denied );
-			return;
-		}
-
-		if( Printer::currentYPosition() < 30.0 )
-		{
-			if( Printer::debugErrors() )
-			{
-				Com::printFLN( PSTR( "startAlignExtruders(): the extruders can not be aligned because the < position is smaller than 30.0 [mm]" ) );
-			}
-
-			showError( (void*)ui_text_align_extruders, (void*)ui_text_operation_denied );
-			return;
-		}
-
-		if( Printer::doHeatBedZCompensation )
-		{
-			if( Printer::debugErrors() )
-			{
-				Com::printFLN( PSTR( "startAlignExtruders(): the extruders can not be aligned because the z compensation is enabled" ) );
-			}
-
-			showError( (void*)ui_text_align_extruders, (void*)ui_text_operation_denied );
-			return;
-		}
-
 		if( abs( extruder[0].tempControl.currentTemperatureC - extruder[1].tempControl.currentTemperatureC ) > 10 )
 		{
 			if( Printer::debugErrors() )
@@ -2248,8 +2319,19 @@ void startAlignExtruders( void )
 				Com::printFLN( PSTR( "startAlignExtruders(): the extruders can not be aligned because their current temperature difference is too big" ) );
 			}
 
-			showError( (void*)ui_text_align_extruders, (void*)ui_text_operation_denied );
+			showError( (void*)ui_text_align_extruders, (void*)ui_text_temperature_wrong );
 			return;
+		}
+
+		if( Printer::doHeatBedZCompensation ||
+			!Printer::isHomed() ||
+			Printer::currentXPosition() < HEAT_BED_SCAN_X_START_MM ||
+			Printer::currentYPosition() < HEAT_BED_SCAN_Y_START_MM ||
+			Printer::currentZPositionSteps() ) 
+		{
+			// in case the user did not set up the proper preconditions manually, we have to establish the default preconditions automatically
+			Printer::homeAxis( true, true, true ); 
+			PrintLine::moveRelativeDistanceInSteps( HEAT_BED_SCAN_X_CALIBRATION_POINT_STEPS, HEAT_BED_SCAN_Y_CALIBRATION_POINT_STEPS, 0, 0, RMath::min(MAX_FEEDRATE_X,MAX_FEEDRATE_Y), true, true );
 		}
 
 		// we are ready to align the extruders at the current x and y position with the current temperature
@@ -2286,7 +2368,6 @@ void alignExtruders( void )
 	static long				nZ;
 	static long				nYDirection;
 	static short			nContactPressure;
-	unsigned char			nLastHeatBedScanStatus = g_nHeatBedScanStatus;
 	short					nTempPressure;
 	long					nTempPosition;
 
@@ -2324,8 +2405,8 @@ void alignExtruders( void )
 
 	if( g_nAlignExtrudersStatus )
 	{
-		if( g_nHeatBedScanStatus != 123 &&
-			g_nHeatBedScanStatus != 125 )
+		if( g_nAlignExtrudersStatus != 123 &&
+			g_nAlignExtrudersStatus != 125 )
 		{
 			// there are a few cases where we do not want to change the current status text
 			UI_STATUS( UI_TEXT_ALIGN_EXTRUDERS );
@@ -2334,8 +2415,8 @@ void alignExtruders( void )
 		if( g_retryZScan )
 		{
 			// we have to retry to scan the current position
-			g_nHeatBedScanStatus = g_retryStatus;
-			g_retryZScan		 = 0;
+			g_nAlignExtrudersStatus = g_retryStatus;
+			g_retryZScan			= 0;
 
 #if DEBUG_HEAT_BED_SCAN == 2
 			if( Printer::debugInfo() )
@@ -2504,7 +2585,7 @@ void alignExtruders( void )
 #if DEBUG_HEAT_BED_SCAN == 2
 				if( Printer::debugInfo() )
 				{
-					Com::printFLN( PSTR( "g_nAlignExtrudersStatus(): 125 -> 145" ) );
+					Com::printFLN( PSTR( "alignExtruders(): 125 -> 145" ) );
 				}
 #endif // DEBUG_HEAT_BED_SCAN == 2
 				break;
@@ -3459,7 +3540,9 @@ void scanWorkPart( void )
 				{
 					Com::printFLN( PSTR( "scanWorkPart(): the scan has been completed" ) );
 				}
+
 				UI_STATUS_UPD( UI_TEXT_WORK_PART_SCAN_DONE );
+				showInformation( (void*)ui_text_work_part_scan, (void*)ui_text_work_part_scan_completed );
 				BEEP_STOP_WORK_PART_SCAN
 
 				g_nWorkPartScanStatus = 0;
@@ -7027,12 +7110,33 @@ void setExtruderCurrent( unsigned short level )
 	}
 #endif // FEATURE_MILLING_MODE
 
+#if NUM_EXTRUDER == 2
+	switch ( Printer::selectExtruders )
+	{
+		case LEFT_EXTRUDER:
+		{
+			// set the current for the left extruder motor
+			setMotorCurrent( 4, level );
+			break;
+		}
+		case RIGHT_EXTRUDER:
+		{
+			// set the current for the right extruder motor
+			setMotorCurrent( 5, level );
+			break;
+		}
+		case DUAL_EXTRUDER:
+		{
+			// set the current for the extruder motor
+			setMotorCurrent( 4, level );
+			setMotorCurrent( 5, level );
+			break;
+		}
+	}
+#else
 	// set the current for the extruder motor
 	setMotorCurrent( 4, level );
-
-#if NUM_EXTRUDER>1
-	setMotorCurrent( 5, level );
-#endif // NUM_EXTRUDER>1
+#endif // NUM_EXTRUDER == 2
 
 	if( Printer::debugInfo() )
 	{
@@ -9367,20 +9471,20 @@ void processCommand( GCode* pCommand )
 						}
 						case 20:
 						{
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 							SET_OUTPUT(DEBUG_TEST_J0_PIN);
 							WRITE(DEBUG_TEST_J0_PIN, 0);
 
 							HAL::forbidInterrupts();
 							WRITE( DEBUG_TEST_J0_PIN, 1 );
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 							HAL::eprSetByte( EPR_SDMODE,sd.sdmode );
 							HAL::eprSetInt32( EPR_SDPOS,sd.sdpos );
 							HAL::eprSetFloat( EPR_BED_TEMP,heatedBedController.currentTemperatureC );
 							HAL::eprSetFloat( EPR_EXTRUDER_1_TEMP,extruder[0].tempControl.currentTemperatureC );
 							HAL::eprSetFloat( EPR_EXTRUDER_2_TEMP,extruder[1].tempControl.currentTemperatureC );
-							HAL::eprSetByte( EPR_FAN_SPEED,pwm_pos[NUM_EXTRUDER+2]);
+							HAL::eprSetByte( EPR_FAN_SPEED,fanSpeed);
 							HAL::eprSetByte( EPR_RELATIVE_COORDINATE_MODE,Printer::relativeCoordinateMode );
 							HAL::eprSetByte( EPR_UNIT_IS_INCHES,Printer::unitIsInches );
 							HAL::eprSetFloat( EPR_ORIGIN_OFFSET_X,Printer::originOffsetMM[X_AXIS] );
@@ -9399,10 +9503,10 @@ void processCommand( GCode* pCommand )
 							HAL::eprSetInt32( EPR_FLOWRATE,Printer::extrudeMultiply );
 							EEPROM::updateChecksum();
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 							WRITE( DEBUG_TEST_J0_PIN, 0 );
 							HAL::allowInterrupts();
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 							HAL::testWatchdog();
 							break;
@@ -10080,11 +10184,30 @@ void processCommand( GCode* pCommand )
 			}
 #endif // FEATURE_RGB_LIGHT_EFFECTS
 
-			case 3309:	// start/abort to align the two extruders
+			case 3309:	// M3309 - start/abort to align the two extruders
 			{
 				if( isSupportedMCommand( pCommand->M, OPERATING_MODE_PRINT ) )
 				{
-					startAlignExtruders();
+#if NUM_EXTRUDER == 2
+					switch ( Printer::selectExtruders )
+					{
+						case LEFT_EXTRUDER:
+						{
+							Com::printFLN( PSTR( "M3309: Is not supported because the Extruders setting is set to: Left Extruder" ) );
+							break;
+						}
+						case RIGHT_EXTRUDER:
+						{
+							Com::printFLN( PSTR( "M3309: Is not supported because the Extruders setting is set to: Right Extruder" ) );
+							break;
+						}
+						case DUAL_EXTRUDER:
+						{
+							startAlignExtruders();
+							break;
+						}
+					}
+#endif // NUM_EXTRUDER == 2
 				}
 				break;
 			}
@@ -10374,7 +10497,26 @@ extern void processButton( int nAction )
 #if NUM_EXTRUDER == 2
 		case UI_ACTION_RF_ALIGN_EXTRUDERS:
 		{
-			startAlignExtruders();
+			switch ( Printer::selectExtruders )
+			{
+				case LEFT_EXTRUDER:
+				{
+					showError( (void*)ui_text_extruder, (void*)ui_text_operation_denied );
+					Com::printFLN( PSTR( "Align Extruders is not supported because the Extruders setting is set to: Left Extruder" ) );
+					break;
+				}
+				case RIGHT_EXTRUDER:
+				{
+					showError( (void*)ui_text_extruder, (void*)ui_text_operation_denied );
+					Com::printFLN( PSTR( "Align Extruders is not supported because the Extruders setting is set to: Right Extruder" ) );
+					break;
+				}
+				case DUAL_EXTRUDER:
+				{
+					startAlignExtruders();
+					break;
+				}
+			}
 			break;
 		}
 #endif // NUM_EXTRUDER == 2
@@ -10455,7 +10597,7 @@ void nextPreviousXAction( int8_t increment )
 		Com::printFLN( PSTR( "nextPreviousXAction(): moving x aborted (min reached)" ) );
 #endif // DEBUG_SHOW_DEVELOPMENT_LOGS
 
-		showError( (void*)ui_text_x_axis, (void*)ui_text_min_reached );
+		showInformation( (void*)ui_text_x_axis, (void*)ui_text_min_reached );
 		return;
 	}
 
@@ -10466,7 +10608,7 @@ void nextPreviousXAction( int8_t increment )
 		Com::printFLN( PSTR( "nextPreviousXAction(): moving x aborted (max reached)" ) );
 #endif // DEBUG_SHOW_DEVELOPMENT_LOGS
 
-		showError( (void*)ui_text_x_axis, (void*)ui_text_max_reached );
+		showInformation( (void*)ui_text_x_axis, (void*)ui_text_max_reached );
 		return;
 	}
 
@@ -10526,8 +10668,8 @@ void nextPreviousXAction( int8_t increment )
 				return;
 			}
 
-			if( increment < 0 )	steps = -(long)((Printer::lengthMM[X_AXIS] + 5) * Printer::axisStepsPerMM[X_AXIS]);
-			else				steps =  (long)((Printer::lengthMM[X_AXIS] + 5) * Printer::axisStepsPerMM[X_AXIS]);
+			if( increment < 0 )	steps = -(long)((Printer::lengthMM[X_AXIS] + X_MAX_LENGTH_OFFSET + 5) * Printer::axisStepsPerMM[X_AXIS]);
+			else				steps =  (long)((Printer::lengthMM[X_AXIS] + X_MAX_LENGTH_OFFSET + 5) * Printer::axisStepsPerMM[X_AXIS]);
 
 			HAL::forbidInterrupts();
 			Printer::directPositionTargetSteps[X_AXIS] = Printer::directPositionCurrentSteps[X_AXIS] + steps;
@@ -10609,7 +10751,7 @@ void nextPreviousYAction( int8_t increment )
 		Com::printFLN( PSTR( "nextPreviousYAction(): moving y aborted (min reached)" ) );
 #endif // DEBUG_SHOW_DEVELOPMENT_LOGS
 
-		showError( (void*)ui_text_y_axis, (void*)ui_text_min_reached );
+		showInformation( (void*)ui_text_y_axis, (void*)ui_text_min_reached );
 		return;
 	}
 
@@ -10620,7 +10762,7 @@ void nextPreviousYAction( int8_t increment )
 		Com::printFLN( PSTR( "nextPreviousYAction(): moving y aborted (max reached)" ) );
 #endif // DEBUG_SHOW_DEVELOPMENT_LOGS
 
-		showError( (void*)ui_text_y_axis, (void*)ui_text_max_reached );
+		showInformation( (void*)ui_text_y_axis, (void*)ui_text_max_reached );
 		return;
 	}
 
@@ -10766,7 +10908,7 @@ void nextPreviousZAction( int8_t increment )
 			Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (max reached)" ) );
 		}
 
-		showError( (void*)ui_text_z_axis, (void*)ui_text_max_reached );
+		showInformation( (void*)ui_text_z_axis, (void*)ui_text_max_reached );
 		return;
 	}
 
@@ -10778,7 +10920,7 @@ void nextPreviousZAction( int8_t increment )
 			Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (z-max reached)" ) );
 		}
 
-		showError( (void*)ui_text_z_axis, (void*)ui_text_max_reached );
+		showInformation( (void*)ui_text_z_axis, (void*)ui_text_max_reached );
 		return;
 	}
 
@@ -10828,7 +10970,7 @@ void nextPreviousZAction( int8_t increment )
 					Com::printFLN( PSTR( "" ) );
 				}
 
-				showError( (void*)ui_text_z_axis, (void*)ui_text_operation_denied );
+				showInformation( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
 				break;
 			}
 			else
@@ -10848,7 +10990,7 @@ void nextPreviousZAction( int8_t increment )
 					{
 						Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (min reached)" ) );
 					}
-					showError( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
+					showInformation( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
 				}
 				if( increment > 0 && Printer::directPositionTargetSteps[Z_AXIS] > EXTENDED_BUTTONS_Z_MAX )
 				{
@@ -10858,7 +11000,7 @@ void nextPreviousZAction( int8_t increment )
 					{
 						Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (max reached)" ) );
 					}
-					showError( (void*)ui_text_z_axis, (void*)ui_text_max_reached );
+					showInformation( (void*)ui_text_z_axis, (void*)ui_text_max_reached );
 				}
 				HAL::allowInterrupts();
 
@@ -10889,7 +11031,7 @@ void nextPreviousZAction( int8_t increment )
 					Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (min reached)" ) );
 				}
 
-				showError( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
+				showInformation( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
 				return;
 			}
 
@@ -10916,7 +11058,7 @@ void nextPreviousZAction( int8_t increment )
 					Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (min reached)" ) );
 				}
 
-				showError( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
+				showInformation( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
 				return;
 			}
 
@@ -10933,7 +11075,7 @@ void nextPreviousZAction( int8_t increment )
 					Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (min reached)" ) );
 				}
 
-				showError( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
+				showInformation( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
 				return;
 			}
 
@@ -10950,7 +11092,7 @@ void nextPreviousZAction( int8_t increment )
 					Com::printFLN( PSTR( "nextPreviousZAction(): moving z aborted (min reached)" ) );
 				}
 
-				showError( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
+				showInformation( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
 				return;
 			}
 
@@ -12534,12 +12676,23 @@ void setupForPrinting( void )
 	Printer::homingFeedrate[Z_AXIS] = HOMING_FEEDRATE_Z_PRINT;
 #endif // EEPROM_MODE
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
+#if NUM_EXTRUDER == 2
+	if ( Printer::selectExtruders == LEFT_EXTRUDER )
+	{
+		Printer::lengthMM[X_AXIS] = X_MAX_LENGTH_PRINT + X_MAX_LENGTH_OFFSET;
+	}
+	else
+	{
+		Printer::lengthMM[X_AXIS] = X_MAX_LENGTH_PRINT;
+	}
+#else
 	Printer::lengthMM[X_AXIS] = X_MAX_LENGTH_PRINT;
+#endif // NUM_EXTRUDER == 2
     HAL::eprSetFloat(EPR_X_LENGTH,Printer::lengthMM[X_AXIS]);
 	EEPROM::updateChecksum();
 	Printer::updateDerivedParameter();
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 	g_staticZSteps = (Printer::ZOffset * Printer::axisStepsPerMM[Z_AXIS]) / 1000;
 
@@ -12590,13 +12743,16 @@ void setupForMilling( void )
 	// disable all heaters
 	Extruder::setHeatedBedTemperature( 0, false );
 	Extruder::setTemperatureForExtruder( 0, 0, false );
+#if NUM_EXTRUDER>1
+	Extruder::setTemperatureForExtruder( 0, 1, false );
+#endif // NUM_EXTRUDER>1
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 	Printer::lengthMM[X_AXIS] = X_MAX_LENGTH_MILL;
     HAL::eprSetFloat(EPR_X_LENGTH,Printer::lengthMM[X_AXIS]);
 	EEPROM::updateChecksum();
 	Printer::updateDerivedParameter();
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 	g_staticZSteps = 0;
 
@@ -13205,7 +13361,7 @@ void notifyAboutWrongHardwareType( unsigned char guessedHardwareType )
 		}
 		case DEVICE_TYPE_RF2000:
 		{
-			// we try to beep via the beeper pin of the RF2000 / RF2000 V2 hardware
+			// we try to beep via the beeper pin of the RF2000 / RF2000v2 hardware
 			SET_OUTPUT( BEEPER_PIN_RF2000 );
 
 			for( uint8_t i=0; i<count; i++ )

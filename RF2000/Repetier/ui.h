@@ -145,6 +145,7 @@
 #define UI_ACTION_ZOFFSET					1128
 #define UI_ACTION_RIGHT						1129
 #define UI_ACTION_ZMODE						1130
+#define	UI_ACTION_EXTRUDERS					1131
 
 #define UI_ACTION_MENU_XPOS					4000
 #define UI_ACTION_MENU_YPOS					4001
@@ -477,7 +478,7 @@ void ui_check_slow_keys(int &action) {}
 #endif // MOTHERBOARD == DEVICE_TYPE_RF1000
 
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 #define UI_HAS_KEYS						  1		// 1 = Some keys attached
 #define UI_HAS_BACK_KEY					  1
 #define UI_DISPLAY_TYPE					  1		// 1 = LCD Display with 4 bit data bus
@@ -531,7 +532,7 @@ void ui_check_keys(int &action)
 inline void ui_check_slow_encoder() {}
 void ui_check_slow_keys(int &action) {}
 #endif // UI_MAIN
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 
 #if UI_ROWS==4

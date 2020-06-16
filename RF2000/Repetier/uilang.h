@@ -105,7 +105,6 @@
 #define UI_TEXT_NOSEL					"\004"
 #define UI_TEXT_PRINT_POS				"Printing..."
 #define UI_TEXT_MILL_POS				"Milling..."
-#define	UI_TEXT_START_MILL				"Start Miller"
 #define UI_TEXT_PAUSED					"Paused"
 #define UI_TEXT_IDLE					"Idle"
 #define UI_TEXT_NOSDCARD				"No SD Card"
@@ -371,7 +370,7 @@
 #define UI_TEXT_STOP_MILL_ACK			"Stop Mill now?","","%mYYes","%mNNo"
 
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 #define	UI_TEXT_RGB_LIGHT_MODE			"RGB Light: %li"
 #define UI_TEXT_230V_OUTPUT				"230V Output: %ou"
 #define UI_TEXT_BAUDRATE				"Baudrate: %oc"
@@ -388,6 +387,10 @@
 #define	UI_TEXT_EXTRUDER_OFFSET_Y		"Extruder Offset Y"
 #define UI_TEXT_E_POSITION				"Position Extruder"
 #define	UI_TEXT_ACTIVE_EXTRUDER			"Active Extruder:%Oa"
+#define UI_TEXT_EXTRUDERS				"Extruders: %XN"
+#define	UI_TEXT_LEFT_EXTRUDER			"Left"
+#define	UI_TEXT_RIGHT_EXTRUDER			"Right"
+#define	UI_TEXT_DUAL_EXTRUDER			"Dual"
 #define UI_TEXT_EXTR_ACCEL				"Acceleration:%XA"								
 #define UI_TEXT_EXTR_WATCH				"Stabilization Time:%Xw"
 #define UI_TEXT_SPEED_MULTIPLY			"Speed Multiply:%om%%%"
@@ -400,10 +403,10 @@
 #define UI_TEXT_Z_MODE_SURFACE			"Surface"
 #define UI_TEXT_Z_MODE_Z_ORIGIN			"Z Origin"
 
-#define UI_TEXT_TEMPERATURE_MANAGER		"Temperatur Manager"
+#define UI_TEXT_TEMPERATURE_MANAGER		"Temperature Manager"
 #define UI_TEXT_OPERATION_DENIED		"Operation denied"
 #define	UI_TEXT_TEMPERATURE_WRONG		"Temperature wrong"
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 
 // ##########################################################################################
 // ##    German
@@ -423,7 +426,6 @@
 #define UI_TEXT_NOSEL					"\004"
 #define UI_TEXT_PRINT_POS				"Drucke..."
 #define UI_TEXT_MILL_POS				"Fr" STR_auml "se..."
-#define	UI_TEXT_START_MILL				"Starte Fr" STR_auml "ser"
 #define UI_TEXT_PAUSED					"Pausiert"
 #define UI_TEXT_IDLE					"Leerlauf"
 #define UI_TEXT_NOSDCARD				"Keine SD Karte"
@@ -680,7 +682,7 @@
 #define UI_TEXT_STOP_MILL				"Fr" STR_auml "sen abbr."
 #define UI_TEXT_STOP_MILL_ACK			"Fr" STR_auml "sen abbr.?","","%mYJa","%mNNein"
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 #define	UI_TEXT_EXTRUDER_OFFSET_X		"Extruder Abstand X"
 #define	UI_TEXT_EXTRUDER_OFFSET_Y		"Extruder Abstand Y"
 #define UI_TEXT_SET_Z_ORIGIN			"Setze Z Ursprung"
@@ -709,6 +711,10 @@
 #define UI_TEXT_UNMOUNT_FILAMENT		"Filament entladen"
 #define UI_TEXT_E_POSITION				"Position Extruder"
 #define	UI_TEXT_ACTIVE_EXTRUDER			"Aktiver Extruder:%Oa"
+#define UI_TEXT_EXTRUDERS				"Extruders: %XN"
+#define	UI_TEXT_LEFT_EXTRUDER			"Links"
+#define	UI_TEXT_RIGHT_EXTRUDER			"Rechts"
+#define	UI_TEXT_DUAL_EXTRUDER			"Dual"
 #define UI_TEXT_SET_E_ORIGIN			"Setze E Ursprung"
 #define UI_TEXT_CONTINUE_PRINT			"Druck fortsetzen"
 #define UI_TEXT_PAUSE_MILL				"Fr" STR_auml "sen pausieren"
@@ -738,10 +744,10 @@
 #define UI_TEXT_STOP_MILL_ACK			"Fr" STR_auml "sen abbrechen?","","%mYJa","%mNNein"
 #define UI_TEXT_Z_MODE_Z_ORIGIN			"Z Urspr."
 
-#define UI_TEXT_TEMPERATURE_MANAGER		"Temperatur Manager"
+#define UI_TEXT_TEMPERATURE_MANAGER		"Temperature Manager"
 #define UI_TEXT_INVALID_MATRIX			"Ung" STR_uuml" ltige Matrix"
 #define	UI_TEXT_TEMPERATURE_WRONG		"Temperatur falsch"
 
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 #endif // UI_LANGUAGE==1
 #endif // UI_LANG_H

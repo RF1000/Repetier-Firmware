@@ -610,7 +610,7 @@ void GCode::readFromSD()
                 sd.sdmode = false;
                 break;
             }
-            UI_ERROR("SD error fixed");
+            UI_ERROR("SD Error fixed");
         }
         sd.sdpos++; // = file.curPosition();
         commandReceiving[commandsReceivingWritePosition++] = (uint8_t)n;

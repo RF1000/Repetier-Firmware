@@ -1,3 +1,19 @@
+V RF.01.47 (2020-06-16)
+- Adding of support for the RF2000v2.
+- In case there are two extruders present, the to-be-used extruder(s) can be chosen within the "Configuration" -> "General" -> "Extruders" menu now.
+  - In case only the left or only the right extruder is chosen here, there is more printing space available in x-direction.
+- Fine-tuning of PID values.
+- Fine-tuning of PWM frequencies.
+- The extruders are being moved to the home position automatically in case the alignment of the extruders is being started.
+- In case the alignment of extruders has been started but is not continued and completed within 60 minutes, the extruders are being turned off and the alignment must be restarted afterwards.
+- After the end of the heat bed scan, the according information message is being displayed until it is acknowledged by the user.
+- The message about the overdrive of an endstop has been changed from an error to an information message.
+- In case a temperature sensor error is detected, there is one additional safety line which shall ensure that all heaters are being disabled.
+- In case the operating mode has been changed to milling, only one of the potencially present two extruders was disabled.
+- Minor clean-ups.
+- Special thanks apply to the following users from the forum at rf1000.de, because they have provided outstanding information and support for several changes from this version:
+  - Nibbels
+
 V RF.01.39 (2017-12-20)
 - Adding of support for the hotend V3, which uses the NTC 3950 100k thermistor.
 - Adding of the "Align Extruders" entry to the "Configuration" -> "Z Calibration" menu.

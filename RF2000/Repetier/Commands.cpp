@@ -393,7 +393,26 @@ uint8_t fanKickstart;
 void Commands::setFanSpeed(int speed,bool wait)
 {
 #if FAN_PIN>=0 && FEATURE_FAN_CONTROL
-	speed = constrain(speed,0,255);
+	long	temp;
+
+	fanSpeed = speed;
+
+	if( speed )
+	{
+		if( speed >= 255 )
+		{
+			speed = 255;
+		}
+		else
+		{
+			temp =  speed;
+			temp *= (COOLER_PWM_MAX - COOLER_PWM_MIN);
+			temp /= 255;
+			temp += COOLER_PWM_MIN;
+
+			speed = constrain(temp,0,255);
+		}
+	}
 
 	if( pwm_pos[NUM_EXTRUDER+2] == speed )
 	{
@@ -403,7 +422,7 @@ void Commands::setFanSpeed(int speed,bool wait)
 
 	if( Printer::debugInfo() )
 	{
-		Com::printFLN(Com::tFanspeed,speed);
+		Com::printFLN(Com::tFanspeed,fanSpeed);
 	}
 
     Printer::setMenuMode(MENU_MODE_FAN_RUNNING,speed!=0);
@@ -414,16 +433,23 @@ void Commands::setFanSpeed(int speed,bool wait)
 	}
 
 #if FAN_KICKSTART_TIME
-    if(fanKickstart == 0 && speed > pwm_pos[NUM_EXTRUDER+2] && speed < 85)
+    if(fanKickstart == 0 && speed > pwm_pos[NUM_EXTRUDER+2] && speed < COOLER_KICKSTART_THRESHOLD )
     {
-         if(pwm_pos[NUM_EXTRUDER+2])	fanKickstart = FAN_KICKSTART_TIME / 100;
-         else							fanKickstart = FAN_KICKSTART_TIME / 25;
+        if(pwm_pos[NUM_EXTRUDER+2])	fanKickstart = FAN_KICKSTART_TIME / 100;
+        else						fanKickstart = FAN_KICKSTART_TIME / 25;
     }
 #endif // FAN_KICKSTART_TIME
 
+/*	Com::printF( PSTR( "speed: " ), fanKickstart );
+	Com::printF( PSTR( " \n " ) );
+*/
     pwm_pos[NUM_EXTRUDER+2] = speed;
 
-	Com::printFLN(Com::tFanspeed,speed); // send only new values to break update loops!
+	// we need an additional handling for slower PWM frequencies
+	pwm_pos_16 =  speed;
+	pwm_pos_16 *= 6;
+
+	Com::printFLN(Com::tFanspeed,fanSpeed); // send only new values to break update loops!
 #endif // FAN_PIN>=0 && FEATURE_FAN_CONTROL
 
 } // setFanSpeed
@@ -1098,7 +1124,40 @@ void Commands::executeGCode(GCode *com)
 							ExtruderTemp = 1;
 						}
 						if(com->hasT())
+						{
+#if NUM_EXTRUDER>1
+							switch ( Printer::selectExtruders )
+							{
+								case LEFT_EXTRUDER:
+								{
+									if ( com->T == 0 )
+									{
+										Extruder::setTemperatureForExtruder(com->S,com->T,com->hasF() && com->F>0);
+									}
+									else
+										Com::printFLN( PSTR( "M104: T1 is not supported because the Extruders setting is set to: Left Extruder" ) );
+									break;
+								}
+								case RIGHT_EXTRUDER:
+								{
+									if ( com->T == 1 )
+									{
+										Extruder::setTemperatureForExtruder(com->S,com->T,com->hasF() && com->F>0);
+									}
+									else
+										Com::printFLN( PSTR( "M104: T0 is not supported because the Extruders setting is set to: Right Extruder" ) );
+									break;
+								}
+								case DUAL_EXTRUDER:
+								{
+									Extruder::setTemperatureForExtruder(com->S,com->T,com->hasF() && com->F>0);
+									break;
+								}
+							}
+#else
 							Extruder::setTemperatureForExtruder(com->S,com->T,com->hasF() && com->F>0);
+#endif // NUM_EXTRUDER>1
+						}
 						else
 							Extruder::setTemperatureForExtruder(com->S,Extruder::current->id,com->hasF() && com->F>0);
 					}
@@ -1155,7 +1214,37 @@ void Commands::executeGCode(GCode *com)
 
 					Commands::waitUntilEndOfAllMoves();
 					Extruder *actExtruder = Extruder::current;
+#if NUM_EXTRUDER>1
+					switch ( Printer::selectExtruders )
+					{
+						case LEFT_EXTRUDER:
+						{
+							if(com->hasT() && com->T == 0) 
+							{
+								actExtruder = &extruder[com->T];
+							}
+							break;
+						}
+						case RIGHT_EXTRUDER:
+						{
+							if(com->hasT() && com->T == 1) 
+							{
+								actExtruder = &extruder[com->T];
+							}
+							break;
+						}
+						case DUAL_EXTRUDER:
+						{
+							if(com->hasT() && com->T<NUM_EXTRUDER) 
+							{
+								actExtruder = &extruder[com->T];
+							}
+							break;
+						}
+					}
+#else
 					if(com->hasT() && com->T<NUM_EXTRUDER) actExtruder = &extruder[com->T];
+#endif // NUM_EXTRUDER>1 
 					if (com->hasS()) Extruder::setTemperatureForExtruder(com->S,actExtruder->id,com->hasF() && com->F>0);
 
 #if defined (SKIP_M109_IF_WITHIN) && SKIP_M109_IF_WITHIN>0
@@ -1351,10 +1440,14 @@ void Commands::executeGCode(GCode *com)
 #if defined(TEMP_PID) && NUM_TEMPERATURE_LOOPS>0
 					int temp = 150;
 					int cont = 0;
+					int cycles = 10;
+					int method = 0;			// 0 = Classic PID ( Ziegler-Nichols )
 					if(com->hasS()) temp = com->S;
 					if(com->hasP()) cont = com->P;
+					if(com->hasR()) cycles = static_cast<int>(com->R);
+					if(com->hasJ()) method = static_cast<int>(com->J);
 					if(cont>=NUM_TEMPERATURE_LOOPS) cont = NUM_TEMPERATURE_LOOPS;
-					tempController[cont]->autotunePID(temp,cont,com->hasX());
+					tempController[cont]->autotunePID(temp,cont,cycles,com->hasX(),method);
 #endif // defined(TEMP_PID) && NUM_TEMPERATURE_LOOPS>0
 				}
 				break;
@@ -1590,11 +1683,11 @@ void Commands::executeGCode(GCode *com)
 #endif // FEATURE_CONFIGURABLE_Z_ENDSTOPS
 #endif // MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 				// the RF2000 uses the max endstop in all operating modes
 				Com::printF(Com::tZMaxColon);
 				Com::printF(Printer::isZMaxEndstopHit()?Com::tHSpace:Com::tLSpace);
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2
 #endif // (Z_MAX_PIN > -1) && MAX_HARDWARE_ENDSTOP_Z
 
 				Com::println();
@@ -1857,7 +1950,7 @@ void Commands::executeGCode(GCode *com)
 			}
 #endif // FEATURE_SERVO && MOTHERBOARD == DEVICE_TYPE_RF1000
 
-#if FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2)
+#if FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2)
 			case 340:	// M340
 			{
 				if( com->hasP() )
@@ -1923,7 +2016,7 @@ void Commands::executeGCode(GCode *com)
 				}
 				break;
 			}
-#endif // FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2)
+#endif // FEATURE_SERVO && (MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000v2)
 
 #if DEBUG_QUEUE_MOVE
 			case 533:	// M533 - Write move data
@@ -1986,7 +2079,38 @@ void Commands::executeGCode(GCode *com)
     else if(com->hasT())      // Process T code
     {
         Commands::waitUntilEndOfAllMoves();
-        Extruder::selectExtruderById(com->T);
+#if NUM_EXTRUDER>1
+		switch ( Printer::selectExtruders )
+		{
+			case LEFT_EXTRUDER:
+			{
+				if ( com->T == 0 )
+				{
+					Extruder::selectExtruderById(com->T);
+				}
+				else
+					Com::printFLN( PSTR( "Extruder T1 is not supported because the Extruders setting is set to: Left Extruder" ) );
+				break;
+			}
+			case RIGHT_EXTRUDER:
+			{
+				if ( com->T == 1 )
+				{
+					Extruder::selectExtruderById(com->T);
+				}
+				else
+					Com::printFLN( PSTR( "Extruder T0 is not supported because the Extruders setting is set to: Right Extruder" ) );
+				break;
+			}
+			case DUAL_EXTRUDER:
+			{
+				Extruder::selectExtruderById(com->T);
+				break;
+			}
+		}
+#else
+		Extruder::selectExtruderById(com->T);
+#endif // NUM_EXTRUDER>1
     }
     else
     {
@@ -2013,6 +2137,7 @@ void Commands::emergencyStop()
         pwm_pos[i] = 0;
 
     pwm_pos[0] = pwm_pos[NUM_EXTRUDER] = pwm_pos[NUM_EXTRUDER+1] = pwm_pos[NUM_EXTRUDER+2]=0;
+	fanSpeed = 0;
 
 #if EXT0_HEATER_PIN>-1
     WRITE(EXT0_HEATER_PIN,HEATER_PINS_INVERTED);

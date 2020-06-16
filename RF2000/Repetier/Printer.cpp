@@ -95,6 +95,8 @@ float			Printer::filamentPrinted;								///< mm of filament printed since count
 long			Printer::ZOffset;										///< Z Offset in um
 char			Printer::ZMode				 = DEFAULT_Z_SCALE_MODE;	///< Z Scale  1 = show the z-distance to z-min (print) or to the z-origin (mill), 2 = show the z-distance to the surface of the heat bed (print) or work part (mill)
 char			Printer::moveMode[3];									///< move mode which is applied within the Position X/Y/Z menus
+char			Printer::selectExtruders;								/// possible selection for Extruders: LEFT_EXTRUDER, RIGHT_EXTRUDER, DUAL_EXTRUDER
+
 
 #if ENABLE_BACKLASH_COMPENSATION
 float			Printer::backlash[3];
@@ -457,7 +459,7 @@ void Printer::kill(uint8_t only_steppers)
 
     if(!only_steppers)
     {
-        for(uint8_t i=0; i<NUM_TEMPERATURE_LOOPS; i++)
+        for(uint8_t i=0; i<NUM_EXTRUDER; i++)
             Extruder::setTemperatureForExtruder(0,i);
         Extruder::setHeatedBedTemperature(0);
         UI_STATUS_UPD(UI_TEXT_KILLED);
@@ -1295,7 +1297,14 @@ void Printer::setup()
     Commands::writeLowestFreeRAM();
     HAL::setupTimer();
 
-    Extruder::selectExtruderById(0);
+#if NUM_EXTRUDER == 2
+	if ( Printer::selectExtruders == RIGHT_EXTRUDER )
+		Extruder::selectExtruderById(1);
+	else
+		Extruder::selectExtruderById(0);
+#else
+	Extruder::selectExtruderById(0);
+#endif
 
 #if SDSUPPORT
     sd.initsd();
@@ -1420,13 +1429,16 @@ void Printer::homeXAxis()
         long offX = 0;
 
 #if NUM_EXTRUDER>1
-        // Reposition extruder that way, that all extruders can be selected at home pos.
-        for(uint8_t i=0; i<NUM_EXTRUDER; i++)
+		if (Printer::selectExtruders == DUAL_EXTRUDER || Printer::selectExtruders == RIGHT_EXTRUDER)
+		{
+			// Reposition extruder that way, that all extruders can be selected at home pos.
+			for(uint8_t i=0; i<NUM_EXTRUDER; i++)
 #if X_HOME_DIR < 0
-            offX = RMath::max(offX,extruder[i].xOffset);
+				offX = RMath::max(offX,extruder[i].xOffset);
 #else
-            offX = RMath::min(offX,extruder[i].xOffset);
+				offX = RMath::min(offX,extruder[i].xOffset);
 #endif // X_HOME_DIR < 0
+		}
 #endif // NUM_EXTRUDER>1
 
 #if FEATURE_MILLING_MODE
@@ -1444,7 +1456,14 @@ void Printer::homeXAxis()
         queuePositionLastSteps[X_AXIS] = -steps;
         PrintLine::moveRelativeDistanceInSteps(2*steps,0,0,0,homingFeedrate[X_AXIS],true,true);
         queuePositionLastSteps[X_AXIS] = (X_HOME_DIR == -1) ? minSteps[X_AXIS]- offX : maxSteps[X_AXIS] + offX;
-        PrintLine::moveRelativeDistanceInSteps(axisStepsPerMM[X_AXIS] * -ENDSTOP_X_BACK_MOVE * X_HOME_DIR,0,0,0,homingFeedrate[X_AXIS] / ENDSTOP_X_RETEST_REDUCTION_FACTOR,true,false);
+
+#if FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
+        directPositionTargetSteps[X_AXIS]  = 0;
+        directPositionCurrentSteps[X_AXIS] = 0;
+		directPositionLastSteps[X_AXIS]	   = 0;
+#endif // FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
+
+		PrintLine::moveRelativeDistanceInSteps(axisStepsPerMM[X_AXIS] * -ENDSTOP_X_BACK_MOVE * X_HOME_DIR,0,0,0,homingFeedrate[X_AXIS] / ENDSTOP_X_RETEST_REDUCTION_FACTOR,true,false);
         PrintLine::moveRelativeDistanceInSteps(axisStepsPerMM[X_AXIS] * 2 * ENDSTOP_X_BACK_MOVE * X_HOME_DIR,0,0,0,homingFeedrate[X_AXIS] / ENDSTOP_X_RETEST_REDUCTION_FACTOR,true,true);
 
 #if defined(ENDSTOP_X_BACK_ON_HOME)
@@ -1455,16 +1474,23 @@ void Printer::homeXAxis()
         queuePositionLastSteps[X_AXIS]	  = (X_HOME_DIR == -1) ? minSteps[X_AXIS]-offX : maxSteps[X_AXIS]+offX;
         queuePositionCurrentSteps[X_AXIS] = queuePositionLastSteps[X_AXIS];
 
-#if FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
-        directPositionTargetSteps[X_AXIS]  = 0;
-        directPositionCurrentSteps[X_AXIS] = 0;
-		directPositionLastSteps[X_AXIS]	   = 0;
-#endif // FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
-
 #if NUM_EXTRUDER>1
-		if( offX )
+		if (Printer::selectExtruders == DUAL_EXTRUDER || Printer::selectExtruders == RIGHT_EXTRUDER)
 		{
-	        PrintLine::moveRelativeDistanceInSteps((Extruder::current->xOffset-offX) * X_HOME_DIR,0,0,0,homingFeedrate[X_AXIS],true,false);
+			if( offX )
+			{
+				PrintLine::moveRelativeDistanceInSteps((Extruder::current->xOffset-offX) * X_HOME_DIR,0,0,0,homingFeedrate[X_AXIS],true,false);
+			}
+		}
+		if ( Printer::selectExtruders == LEFT_EXTRUDER )
+		{
+			Printer::lengthMM[X_AXIS] = X_MAX_LENGTH_PRINT + X_MAX_LENGTH_OFFSET;
+			if ( HAL::eprGetFloat(EPR_X_LENGTH) != Printer::lengthMM[X_AXIS] )
+			{
+				HAL::eprSetFloat(EPR_X_LENGTH,Printer::lengthMM[X_AXIS]);
+				EEPROM::updateChecksum();
+				Printer::updateDerivedParameter();
+			}
 		}
 #endif // NUM_EXTRUDER>1
 
@@ -1485,13 +1511,16 @@ void Printer::homeYAxis()
         long offY = 0;
 
 #if NUM_EXTRUDER>1
-        // Reposition extruder that way, that all extruders can be selected at home pos.
-        for(uint8_t i=0; i<NUM_EXTRUDER; i++)
+		if (Printer::selectExtruders == DUAL_EXTRUDER )
+		{
+			// Reposition extruder that way, that all extruders can be selected at home pos.
+			for(uint8_t i=0; i<NUM_EXTRUDER; i++)
 #if Y_HOME_DIR<0
-            offY = RMath::max(offY,extruder[i].yOffset);
+				offY = RMath::max(offY,extruder[i].yOffset);
 #else
-            offY = RMath::min(offY,extruder[i].yOffset);
+				offY = RMath::min(offY,extruder[i].yOffset);
 #endif // Y_HOME_DIR<0
+		}
 #endif // NUM_EXTRUDER>1
 
 #if FEATURE_MILLING_MODE
@@ -1509,8 +1538,15 @@ void Printer::homeYAxis()
         queuePositionLastSteps[Y_AXIS] = -steps;
         PrintLine::moveRelativeDistanceInSteps(0,2*steps,0,0,homingFeedrate[Y_AXIS],true,true);
         queuePositionLastSteps[Y_AXIS] = (Y_HOME_DIR == -1) ? minSteps[Y_AXIS]-offY : maxSteps[Y_AXIS]+offY;
-        PrintLine::moveRelativeDistanceInSteps(0,axisStepsPerMM[Y_AXIS]*-ENDSTOP_Y_BACK_MOVE * Y_HOME_DIR,0,0,homingFeedrate[Y_AXIS]/ENDSTOP_X_RETEST_REDUCTION_FACTOR,true,false);
-        PrintLine::moveRelativeDistanceInSteps(0,axisStepsPerMM[Y_AXIS]*2*ENDSTOP_Y_BACK_MOVE * Y_HOME_DIR,0,0,homingFeedrate[Y_AXIS]/ENDSTOP_X_RETEST_REDUCTION_FACTOR,true,true);
+
+#if FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
+        directPositionTargetSteps[Y_AXIS]  = 0;
+        directPositionCurrentSteps[Y_AXIS] = 0;
+		directPositionLastSteps[Y_AXIS]	   = 0;
+#endif // FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
+
+		PrintLine::moveRelativeDistanceInSteps(0,axisStepsPerMM[Y_AXIS]*-ENDSTOP_Y_BACK_MOVE * Y_HOME_DIR,0,0,homingFeedrate[Y_AXIS]/ENDSTOP_Y_RETEST_REDUCTION_FACTOR,true,false);
+        PrintLine::moveRelativeDistanceInSteps(0,axisStepsPerMM[Y_AXIS]*2*ENDSTOP_Y_BACK_MOVE * Y_HOME_DIR,0,0,homingFeedrate[Y_AXIS]/ENDSTOP_Y_RETEST_REDUCTION_FACTOR,true,true);
 
 #if defined(ENDSTOP_Y_BACK_ON_HOME)
         if(ENDSTOP_Y_BACK_ON_HOME > 0)
@@ -1520,16 +1556,13 @@ void Printer::homeYAxis()
         queuePositionLastSteps[Y_AXIS]	  = (Y_HOME_DIR == -1) ? minSteps[Y_AXIS]-offY : maxSteps[Y_AXIS]+offY;
         queuePositionCurrentSteps[Y_AXIS] = queuePositionLastSteps[Y_AXIS];
 
-#if FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
-        directPositionTargetSteps[Y_AXIS]  = 0;
-        directPositionCurrentSteps[Y_AXIS] = 0;
-		directPositionLastSteps[Y_AXIS]	   = 0;
-#endif // FEATURE_EXTENDED_BUTTONS || FEATURE_PAUSE_PRINTING
-
 #if NUM_EXTRUDER>1
-		if( offY )
+		if (Printer::selectExtruders == DUAL_EXTRUDER )
 		{
-	        PrintLine::moveRelativeDistanceInSteps(0,(Extruder::current->yOffset-offY) * Y_HOME_DIR,0,0,homingFeedrate[Y_AXIS],true,false);
+			if( offY )
+			{
+				PrintLine::moveRelativeDistanceInSteps(0,(Extruder::current->yOffset-offY) * Y_HOME_DIR,0,0,homingFeedrate[Y_AXIS],true,false);
+			}
 		}
 #endif // NUM_EXTRUDER>1
 

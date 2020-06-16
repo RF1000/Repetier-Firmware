@@ -104,6 +104,7 @@ For delta robot Z_MAX_LENGTH is the maximum travel of the towers and should be s
 and the platform when the printer is at its home position.
 If EEPROM is enabled these values will be overidden with the values in the EEPROM */
 #define X_MAX_LENGTH_PRINT					(long)180
+#define X_MAX_LENGTH_OFFSET					(long) 30
 #define X_MAX_LENGTH_MILL					(long)230
 #define Y_MAX_LENGTH						(long)245
 #define Z_MAX_LENGTH						(long)200
@@ -144,66 +145,6 @@ Overridden if EEPROM activated.*/
 
 /** \brief Extruder allow cold movement which can be set for the extruder */
 #define EXTRUDER_ALLOW_COLD_MOVE			0
-
-
-// ##########################################################################################
-// ##	Hotend V1
-// ##########################################################################################
-
-/** \brief The maximum value, I-gain can contribute to the output. */
-#define HT2_PID_INTEGRAL_DRIVE_MAX			130
-
-/** \brief lower value for integral part. */
-#define HT2_PID_INTEGRAL_DRIVE_MIN			60
-
-/** \brief P-gain. */
-#define HT2_PID_P							37.52
-
-/** \brief I-gain. */
-#define HT2_PID_I							10
-
-/** \brief Dgain. */
-#define HT2_PID_D							35.18
-
-
-// ##########################################################################################
-// ##	Hotend V2
-// ##########################################################################################
-
-/** \brief The maximum value, I-gain can contribute to the output. */
-#define HT3_PID_INTEGRAL_DRIVE_MAX			180
-
-/** \brief lower value for integral part. */
-#define HT3_PID_INTEGRAL_DRIVE_MIN			40
-
-/** \brief P-gain. */
-#define HT3_PID_P							95
-
-/** \brief I-gain. */
-#define HT3_PID_I							120
-
-/** \brief Dgain. */
-#define HT3_PID_D							130
-
-
-// ##########################################################################################
-// ##	Hotend V3
-// ##########################################################################################
-
-/** \brief The maximum value, I-gain can contribute to the output. */
-#define HT4_PID_INTEGRAL_DRIVE_MAX			180
-
-/** \brief lower value for integral part. */
-#define HT4_PID_INTEGRAL_DRIVE_MIN			40
-
-/** \brief P-gain. */
-#define HT4_PID_P							95
-
-/** \brief I-gain. */
-#define HT4_PID_I							120
-
-/** \brief Dgain. */
-#define HT4_PID_D							130
 
 
 // ##########################################################################################
@@ -315,6 +256,26 @@ Overridden if EEPROM activated. */
 #define EXT0_PID_D							HT3_PID_D
 
 #endif // EXT0_HOTEND_TYPE == HOTEND_TYPE_V2_DUAL
+
+
+#if EXT0_HOTEND_TYPE == HOTEND_TYPE_V3
+
+/** \brief The maximum value, I-gain can contribute to the output. Overridden if EEPROM activated. */
+#define EXT0_PID_INTEGRAL_DRIVE_MAX			HT4_PID_INTEGRAL_DRIVE_MAX
+
+/** \brief lower value for integral part. Overridden if EEPROM activated. */
+#define EXT0_PID_INTEGRAL_DRIVE_MIN			HT4_PID_INTEGRAL_DRIVE_MIN
+
+/** \brief P-gain. Overridden if EEPROM activated. */
+#define EXT0_PID_P							HT4_PID_P
+
+/** \brief I-gain. Overridden if EEPROM activated. */
+#define EXT0_PID_I							HT4_PID_I
+
+/** \brief Dgain. Overridden if EEPROM activated.*/
+#define EXT0_PID_D							HT4_PID_D
+
+#endif // EXT0_HOTEND_TYPE == HOTEND_TYPE_V3
 
 
 /** \brief maximum time the heater is can be switched on. Max = 255.  Overridden if EEPROM activated. */
@@ -463,6 +424,26 @@ Overridden if EEPROM activated. */
 #endif // EXT1_HOTEND_TYPE == HOTEND_TYPE_V2_DUAL
 
 
+#if EXT1_HOTEND_TYPE == HOTEND_TYPE_V3
+
+/** \brief The maximum value, I-gain can contribute to the output. Overridden if EEPROM activated. */
+#define EXT1_PID_INTEGRAL_DRIVE_MAX			HT4_PID_INTEGRAL_DRIVE_MAX
+
+/** \brief lower value for integral part. Overridden if EEPROM activated. */
+#define EXT1_PID_INTEGRAL_DRIVE_MIN			HT4_PID_INTEGRAL_DRIVE_MIN
+
+/** \brief P-gain.  Overridden if EEPROM activated. */
+#define EXT1_PID_P							HT4_PID_P
+
+/** \brief I-gain. Overridden if EEPROM activated. */
+#define EXT1_PID_I							HT4_PID_I
+
+/** \brief Dgain.  Overridden if EEPROM activated.*/
+#define EXT1_PID_D							HT4_PID_D
+
+#endif // EXT1_HOTEND_TYPE == HOTEND_TYPE_V3
+
+
 /** \brief maximum time the heater is can be switched on. Max = 255.  Overridden if EEPROM activated. */
 #define EXT1_PID_MAX						255
 
@@ -566,19 +547,19 @@ A good start is 30 lower then the optimal value. You need to leave room for cool
 #define HEATED_BED_PID_INTEGRAL_DRIVE_MIN	80
 
 /** \brief P-gain.  Overridden if EEPROM activated. */
-#define HEATED_BED_PID_PGAIN				53.74
+#define HEATED_BED_PID_PGAIN				91.13
 
 /** \brief I-gain  Overridden if EEPROM activated.*/
-#define HEATED_BED_PID_IGAIN				7.48
+#define HEATED_BED_PID_IGAIN				39.42
 
 /** \brief Dgain.  Overridden if EEPROM activated.*/
-#define HEATED_BED_PID_DGAIN				96.52
+#define HEATED_BED_PID_DGAIN				52.66
 
 /** \brief maximum time the heater can be switched on. Max = 255.  Overridden if EEPROM activated.*/
 #define HEATED_BED_PID_MAX					255
 
 /** \brief Extreme values to detect defect thermistors. */
-#define MIN_DEFECT_TEMPERATURE				-10
+#define MIN_DEFECT_TEMPERATURE				  1
 #define MAX_DEFECT_TEMPERATURE				300
 
 
@@ -770,19 +751,24 @@ can set it on for safety. */
 /** \brief Automatic filament change, mounting of the filament without heating - ensure that G1 does not attempt to extrude more than EXTRUDE_MAXLENGTH */
 #define	MOUNT_FILAMENT_SCRIPT_WITHOUT_HEATING		"G21\nG90\nG92 E0\nG1 E40 F80"
 
-/** \brief speed of the PWM signal, 0 = 15.25Hz, 1 = 30.51Hz, 2 = 61.03Hz, 3 = 122.06Hz */
+/** \brief speed of the PWM signal, 0 = 15.25Hz, 1 = 30.51Hz, 2 = 61.03Hz, 3 = 122.06Hz, 5 = 3.05 Hz */
 #define HEATER_PWM_SPEED					1
-#define COOLER_PWM_SPEED					3
+#define COOLER_PWM_SPEED					0
+
+/** \brief the following values can be used in order to fine-tune the operating range of the cooler */
+#define	COOLER_PWM_MIN					   72	// 0 ... 255 equals 0 ... 100 %
+#define	COOLER_PWM_MAX					  127	// 0 ... 255 equals 0 ... 100 %
+#define	COOLER_KICKSTART_THRESHOLD		   64	// COOLER_PWM_MIN ... COOLER_PWM_MAX equals 0 ... 100 %
 
 /** \brief You can use either PWM (pulse width modulation) or PDM (pulse density modulation) for
 // coolers. PDM will give more signal changes per second, so on average it gives
 // the cleaner signal. The only advantage of PWM is giving signals at a fixed rate and never more
 // then PWM. */
-#define PDM_FOR_COOLER						1
+#define PDM_FOR_COOLER						0
 
 /** \brief Some fans won't start for low values, but would run if started with higher power at the beginning.
 This defines the full power duration before returning to set value. Time is in milliseconds */
-#define FAN_KICKSTART_TIME					200
+#define FAN_KICKSTART_TIME					500
 
 
 // ##########################################################################################
@@ -1032,6 +1018,7 @@ Above this value the z compensation will distribute the roughness of the surface
 #define HEAT_BED_SCAN_PRESSURE_TOLERANCE		15																		// [digits]
 #define HEAT_BED_SCAN_PRESSURE_READ_DELAY_MS	15																		// [ms]
 #define	HEAT_BED_SCAN_DELAY						1000																	// [ms]
+#define HEAT_BED_SCAN_ALIGN_EXTRUDERS_DELAY		(unsigned long)3600														// [s]
 
 #if FEATURE_PRECISE_HEAT_BED_SCAN
 

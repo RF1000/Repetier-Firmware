@@ -96,12 +96,7 @@ void EEPROM::restoreEEPROMSettingsFromConfiguration()
 #endif // FEATURE_MILLING_MODE
 
 #if FEATURE_CONFIGURABLE_HOTEND_TYPE
-#if MOTHERBOARD == DEVICE_TYPE_RF1000
-	Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
-#endif // MOTHERBOARD == DEVICE_TYPE_RF1000
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
-	Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+	Printer::HotendType = EXT0_HOTEND_TYPE;
 #endif // FEATURE_CONFIGURABLE_HOTEND_TYPE
 
 	Printer::maxJerk = MAX_JERK;
@@ -199,6 +194,7 @@ void EEPROM::restoreEEPROMSettingsFromConfiguration()
     e->maxStartFeedrate = EXT1_MAX_START_FEEDRATE;
     e->maxAcceleration = EXT1_MAX_ACCELERATION;
     e->tempControl.heatManager = EXT1_HEAT_MANAGER;
+	Printer::selectExtruders = DUAL_EXTRUDER;
 
 #ifdef TEMP_PID
     e->tempControl.pidDriveMax = EXT1_PID_INTEGRAL_DRIVE_MAX;
@@ -439,6 +435,7 @@ void EEPROM::storeDataIntoEEPROM(uint8_t corrupted)
     HAL::eprSetFloat(EPR_Z_MAX_FEEDRATE,Printer::maxFeedrate[Z_AXIS]);
 	HAL::eprSetInt32(EPR_RF_Z_OFFSET,Printer::ZOffset);
 	HAL::eprSetByte(EPR_RF_Z_MODE,Printer::ZMode);
+	HAL::eprSetByte(EPR_RF_EXTRUDERS,Printer::selectExtruders);
 	HAL::eprSetByte(EPR_RF_MOVE_MODE_X,Printer::moveMode[X_AXIS]);
 	HAL::eprSetByte(EPR_RF_MOVE_MODE_Y,Printer::moveMode[Y_AXIS]);
 	HAL::eprSetByte(EPR_RF_MOVE_MODE_Z,Printer::moveMode[Z_AXIS]);
@@ -668,6 +665,9 @@ void EEPROM::initializeAllOperatingModes()
 		HAL::eprSetFloat(EPR_Y_HOMING_FEEDRATE_PRINT,HOMING_FEEDRATE_Y_PRINT);
 		HAL::eprSetFloat(EPR_Z_HOMING_FEEDRATE_PRINT,HOMING_FEEDRATE_Z_PRINT);
 	}
+
+	EEPROM::updateChecksum();
+
 #endif // FEATURE_MILLING_MODE
 
 } // initializeAllOperatingModes
@@ -688,6 +688,7 @@ void EEPROM::readDataFromEEPROM()
     Printer::maxFeedrate[Z_AXIS] = HAL::eprGetFloat(EPR_Z_MAX_FEEDRATE);
 	Printer::ZOffset = HAL::eprGetInt32(EPR_RF_Z_OFFSET);
 	Printer::ZMode = HAL::eprGetByte(EPR_RF_Z_MODE);
+	Printer::selectExtruders = HAL::eprGetByte(EPR_RF_EXTRUDERS);
 	g_staticZSteps = (Printer::ZOffset * Printer::axisStepsPerMM[Z_AXIS]) / 1000;
 	Printer::moveMode[X_AXIS] = HAL::eprGetByte(EPR_RF_MOVE_MODE_X);
 	Printer::moveMode[Y_AXIS] = HAL::eprGetByte(EPR_RF_MOVE_MODE_Y);
@@ -833,13 +834,7 @@ void EEPROM::readDataFromEEPROM()
 	Printer::HotendType = HAL::eprGetByte( EPR_RF_HOTEND_TYPE );
 	if( Printer::HotendType < HOTEND_TYPE_1 || Printer::HotendType > HOTEND_TYPE_V3 )
 	{
-#if MOTHERBOARD == DEVICE_TYPE_RF1000
-		Printer::HotendType = HOTEND_TYPE_V2_SINGLE;
-#endif // MOTHERBOARD == DEVICE_TYPE_RF1000
-
-#if MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
-		Printer::HotendType = HOTEND_TYPE_V2_DUAL;
-#endif // MOTHERBOARD == DEVICE_TYPE_RF2000 || MOTHERBOARD == DEVICE_TYPE_RF2000_V2
+		Printer::HotendType = EXT0_HOTEND_TYPE;
 	}
 
 	// we do not call updateHotendType() here because somebody might have fine-tuned his settings within the EEPROM after choosing of the proper hotend type
@@ -1016,6 +1011,7 @@ void EEPROM::writeSettings()
     writeFloat(EPR_Z_MAX_FEEDRATE,Com::tEPRZMaxFeedrate);
 	writeLong(EPR_RF_Z_OFFSET,Com::tEPRZOffset);
 	writeByte(EPR_RF_Z_MODE,Com::tEPRZMode);
+	writeByte(EPR_RF_EXTRUDERS,Com::tEPRExtruders);
 
 #if FEATURE_MILLING_MODE
 	if( Printer::operatingMode == OPERATING_MODE_PRINT )

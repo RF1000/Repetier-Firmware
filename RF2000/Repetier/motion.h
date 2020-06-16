@@ -227,7 +227,8 @@ public:
 				//Com::printFLN( PSTR( ", " ), Printer::directPositionTargetSteps[Z_AXIS] );
 
 				// during normal operation, we never should end up here ... typically, the Z-min hardware switch must be reconfigured when you end up here
-				doEmergencyStop( STOP_BECAUSE_OF_Z_MIN );
+				//doEmergencyStop( STOP_BECAUSE_OF_Z_MIN );
+				showInformation( (void*)ui_text_z_axis, (void*)ui_text_min_reached );
 			}
 
 #endif // FEATURE_Z_MIN_OVERRIDE_VIA_GCODE && FEATURE_ENABLE_Z_SAFETY

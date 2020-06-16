@@ -99,6 +99,7 @@ public:
 	static long				ZOffset;							// Z Offset in um
 	static char				ZMode;								// Z Scale
 	static char				moveMode[3];						// move mode which is applied within the Position X/Y/Z menus
+	static char				selectExtruders;					// possible selection for Extruders: left, right, dual
 
 #if ENABLE_BACKLASH_COMPENSATION
     static float			backlash[3];
@@ -1152,7 +1153,8 @@ public:
 
 	static inline int getFanSpeed()
 	{
-        return (int)pwm_pos[NUM_EXTRUDER+2];
+		return (int)fanSpeed;
+
     } // getFanSpeed
 
 #if FEATURE_MEMORY_POSITION

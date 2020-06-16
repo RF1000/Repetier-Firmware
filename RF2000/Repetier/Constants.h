@@ -20,7 +20,7 @@
 #define CONSTANTS_H
 
 
-#define REPETIER_VERSION					"RF.01.39"
+#define REPETIER_VERSION					"RF.01.47"
 #define UI_PRINTER_COMPANY					"Conrad SE"
 #define UI_VERSION_STRING					"V " REPETIER_VERSION
 
@@ -31,7 +31,7 @@
 
 #define	DEVICE_TYPE_RF1000					13
 #define DEVICE_TYPE_RF2000					14
-#define	DEVICE_TYPE_RF2000_V2				15
+#define	DEVICE_TYPE_RF2000v2				15
 
 #define	OPERATING_MODE_PRINT				1	// the firmware works in mode "print"
 #define OPERATING_MODE_MILL					2	// the firmware works in mode "mill"
@@ -123,6 +123,10 @@
 
 #define	STOP_BECAUSE_OF_Z_MIN				1
 #define	STOP_BECAUSE_OF_Z_BLOCK				2
+
+#define LEFT_EXTRUDER						0
+#define	RIGHT_EXTRUDER						1
+#define	DUAL_EXTRUDER						2
 
 
 // ##########################################################################################
